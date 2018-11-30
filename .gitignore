@@ -1,3 +1,9 @@
 *log
 *pyc
+*tmp
+tvm_root
+*params
+*nd
+*so
+*json
  __pycache__

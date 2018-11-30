@@ -226,6 +226,46 @@ https://docs.tvm.ai/dev/nnvm_json_spec.html?highlight=json
 
 
 
-# Deploy NNVM Modules
+# 重要
+
+這邊有 c++ load params 的方法
+
+#Deploy NNVM Modules
 
 https://docs.tvm.ai/deploy/nnvm.html#deploy-as-system-module
+
+https://docs.tvm.ai/deploy/nnvm.html
+
+
+
+
+
+#Load Data to GPU
+
+```c++
+int result = TVMArrayCopyFromBytes(x, fdata, 3 * 224 * 224 * 4);
+```
+
+這邊乘以 4 是因爲 float32 佔 4 個 byte，所以不管我們是用
+
+```c++
+float * fdata = new float [size];
+```
+
+還是
+
+```c++
+vector <float> fdata = vector <float> (size);
+```
+
+在 TVMArrayCopyFromBytes 都要乘以 4
+
+# Get Data GPU
+
+```c++
+int sync =  TVMSynchronize (device_type, device_id, stvm);
+
+int result = TVMArrayCopyToBytes(y, fdata.data(), 1 * 7 * 222 * 222 * 4);
+```
+
+從 GPU 讀取 Forward 後的資料到 CPU，一樣要乘以 4

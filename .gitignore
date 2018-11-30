@@ -6,4 +6,5 @@ tvm_root
 *nd
 *so
 *json
+lib*
  __pycache__

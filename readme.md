@@ -269,3 +269,72 @@ int result = TVMArrayCopyToBytes(y, fdata.data(), 1 * 7 * 222 * 222 * 4);
 ```
 
 從 GPU 讀取 Forward 後的資料到 CPU，一樣要乘以 4
+
+
+
+
+
+
+
+# 進度
+
+---
+
+目前在 TX2 上使用基本的 TVM Compiled Model 不管是 CPU 或是 GPU 都已經可以正常使用了，不會像使用 MXNet 那樣發生問題
+
+目前打算把 TVM 的一些基本 Function 打包成一個簡單的 class 以便之後調用
+
+Pipe 是用來對特定一個 Data 在 TVMArray 和 Mat 或是 Float Array 之間轉換
+
+例如我們常常會在輸入影像，這時我們就要把 Mat 轉成 Float Array 再轉成 TVMArray
+
+影像輸入後，經過 Forward 後我們就要來看輸出的結果了，這時候除非我們是生成影像，如 GAN 等，不然我們應該都是轉成 Float Array 因爲我們可能要分類或是做 Detection 等
+
+
+
+目前遇到了一個問題是 TVM 的 ssd 不支援 GPU Inference，測試後發現是 NMS 的部分，所以想說 NMS 的部分可能會改爲用 CPU 預測，Inception 的部分就保持 GPU，
+
+NMS 選車
+
+用 MXNet - CPU 
+
+用 TVM - CPU
+
+用 MXNet -GPU ，但是 C++ 版本還有問題
+
+
+
+# Script
+
+run.py : 基本的 tvm 用法
+
+run_det_gpu : 沒有 nms 的部分的 ssd 
+
+run_nms_cpu : 輸入是從 ssd 的 multi_feature_layer 出來的三個 symbol
+
+會各自讀取 -det.json
+
+和 nms-json
+
+至於 nms-json 和 -det.json 的生成就要去 mxnet/example/ssd 用 split_ssd.py
+
+
+
+
+
+TVM 記錄
+
+每次 TVMCopy後最好還是使用 set_input 比較好
+
+如果想要複製一個 TVMArray 到另一個 TVMArray
+
+可以用 TVMArrayCopyFromTo
+
+也可以直接用 = 這樣就是使用 Reference
+
+
+
+
+
+
+

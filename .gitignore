@@ -8,6 +8,7 @@ tvm_root
 *so
 *json
 lib*
+<<<<<<< HEAD
 dog*
 *bin
 *jpg
@@ -16,4 +17,6 @@ dog*
 model
 model*
 
+=======
+>>>>>>> c1d8e3cb46023edce2f6506000cd6914170b4e01
  __pycache__

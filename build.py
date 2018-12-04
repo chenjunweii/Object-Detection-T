@@ -5,7 +5,7 @@ from nnvm import testing
 from tvm import autotvm
 from tvm.contrib.util import tempdir
 from tvm.autotvm.tuner import XGBTuner, GATuner, RandomTuner, GridSearchTuner
-from load_deploy_model import load_model
+from load_deploy_model import load_model, load_mxnet_model
 
 def get_network(name, batch_size):
     """Get the symbol definition and random weight of a network"""
@@ -23,13 +23,18 @@ def get_network(name, batch_size):
     elif name == 'squeezenet_v1.1':
         net, params = nnvm.testing.squeezenet.get_workload(batch_size=batch_size, version='1.1')
     elif name == 'inception_v3':
-        input_shape = (1, 3, 512, 512)
+        #input_shape = (1, 3, 512, 512)
         net, params = nnvm.testing.inception_v3.get_workload(batch_size=batch_size)
 
-    elif name == 'ssd-inception_v3':
-        block = get_model('resnet18_v1', pretrained=True)
-        net, params = nnvm.frontend.from_mxnet(block)
-        net = nnvm.sym.softmax(net)
+    elif name == 'ssd-inceptionv3':
+
+        net, params = load_mxnet_model('deploy_ssd_inceptionv3_512', 215, 'model')
+
+        net, params = nnvm.frontend.from_mxnet(net, params)
+
+        input_shape = (1, 3, 512, 512)
+
+        output_shape = None
     
     elif name == 'custom':
         # an example for custom network
@@ -47,12 +52,18 @@ def get_network(name, batch_size):
         net = nnvm.sym.softmax(net)
 
 
+    elif name == 'test_nms':
+        
+        net, params, input_shape = load_model('test_nms')
+        net, params = nnvm.frontend.from_mxnet(net)
+
     elif name == 'test':
         
         net, params, input_shape = load_model('test')
         net, params = nnvm.frontend.from_mxnet(net)
 
     else:
+    
         raise ValueError("Unsupported network: " + name)
 
     return net, params, input_shape, output_shape

@@ -19,6 +19,8 @@ parser.add_argument('--dtype', type = str, default = 'float32', help = 'Data Typ
 
 parser.add_argument('--tuner', type = str, default = 'xgb', help = 'Select Tuner')
 
+parser.add_argument('--recompile', action = 'store_true', help = 'ReCompile')
+
 args = parser.parse_args()
 
 if args.target == 'cuda':
@@ -31,6 +33,7 @@ else:
 
 
 option = {
+    'recompile' : args.recompile,
     'network' : args.network,
     'dtype' : args.dtype,
     'target' : target,

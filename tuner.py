@@ -13,45 +13,61 @@ from build import get_network
 from utils import save_tvm_graph, save_tvm_params
 
 class tuner(object):
-
     def __init__(self, **kwargs):
-
         for k, v in kwargs.items():
-
             setattr(self, k, v)
-
         self.net, self.params, self.input_shape, self.out_shape = get_network(self.network, batch_size = 1)
-    
     def tune(self):
-        
         print("[*] Extract tasks...")
 
+        """
         self.tasks = autotvm.task.extract_from_graph(self.net, target = self.target,
                                                 shape = {'data': self.input_shape}, dtype = self.dtype,
-                                                symbols = (nnvm.sym.conv2d, ))
+                                                symbols = (nnvm.sym.conv2d,
+                                                    nnvm.sym.dense))
+                                                    #nnvm.symbol.multibox_prior,
+                                                    #nnvm.symbol.multibox_transform_loc,
+                                                    #nnvm.symbol.nms))
+
+
+        """
         # run tuning tasks
         print("[*] Tuning...")
 
-        #self.tune_tasks()
-
-        #log_file = '{}.log'.format(self.network)
+        #if not self.recompile:
+        #    self.tune_tasks()
 
         # compile kernels with history best records
 
-        with autotvm.apply_history_best(self.log_filename):
-            print("[*] Compile...")
-            with nnvm.compiler.build_config(opt_level = 3):
-                graph, lib, params = nnvm.compiler.build(
-                    self.net,
-                    target = self.target,
-                    shape = {'data': self.input_shape},
-                    params = self.params,
-                    dtype = self.dtype)
+        #print(self.net.list_output_names())
+        #print(self.net.list_input_names())
+        #print(self.net.debug_str())
 
-            # export library
+
+        types = dict()
+
+        types['data'] = 'float32'
+        
+        #types['multibox_transform_loc0'] = 'int32'
+
+        #with autotvm.apply_history_best(self.log_filename):
+        print("[*] Compile...")
+        with nnvm.compiler.build_config(opt_level = 3):
+            graph, lib, params = nnvm.compiler.build(
+                self.net,
+                target = self.target,
+                target_host = 'llvm',
+                shape = {'data': self.input_shape},
+                params = self.params,
+                dtype = self.dtype)
+
+        # export library
+
+            print('[*] Exporting ... ')
             
-            lib.export_library('{}.tvm.so'.format(self.network))
-            #lib.export_library('{}.tvm.tar'.format(self.network))
+            lib.export_library('lib/{}.tvm.so'.format(self.network))
+
+            lib.save('lib/{}.tvm.o'.format(self.network))
 
             save_tvm_graph(self.network, graph)
     

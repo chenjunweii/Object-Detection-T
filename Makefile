@@ -20,17 +20,17 @@ LIBRARY = -L ${MXNET_LIB} \
 INCLUDE = -I ./ \
 -I /usr/local/include \
 -I ${MXNET}/include \
--I ${MXNET}/3rdparty/tvm/nnvm/include \
--I ${MXNET}/3rdparty/dmlc-core/include \
+-I ${TVM}/3rdparty/tvm/nnvm/include \
+-I ${TVM}/3rdparty/dmlc-core/include \
 -I src 
   
 DEPENDENCIES = src/cv.h
 
 # Makefile Example to deploy TVM modules.
 #-TVM_ROOT=$(shell cd ../..; pwd)
-TVM_ROOT=/home/ur/src/tvm
-NNVM_PATH=nnvm
-DMLC_CORE=${TVM_ROOT}/3rdparty/dmlc-core
+TVM_ROOT = ~/src/tvm
+NNVM_PATH = nnvm
+DMLC_CORE = ${TVM_ROOT}/3rdparty/dmlc-core
 
 PKG_CFLAGS = -std=c++11 -O2 -fPIC\
 	-I${TVM_ROOT}/include\
@@ -53,6 +53,12 @@ lib/libtvm_runtime_pack.o: tvm_runtime_pack.cc
 test : test_tvm.cc lib/libtvm_runtime_pack.o
 	@mkdir -p $(@D)
 	$(CXX) $(PKG_CFLAGS) -o $@  $^ $(PKG_LDFLAGS) -lcudart -lcublas -lcudnn -lcuda
+test_flt : test_tvm_flt.cc lib/libtvm_runtime_pack.o src/*
+	@mkdir -p $(@D)
+	$(CXX) $(PKG_CFLAGS) -o $@  $^ $(PKG_LDFLAGS) -lcudart -lcublas -lcudnn -lcuda $(LIBRARY)
+test_flt_exe : test_tvm_flt_exe.cc lib/libtvm_runtime_pack.o src/*
+	@mkdir -p $(@D)
+	$(CXX) $(PKG_CFLAGS) -o $@  $^ $(PKG_LDFLAGS) -lcudart -lcublas -lcudnn -lcuda $(LIBRARY)
 # The code library built by TVM
 lib/test_addone_sys.o: prepare_test_libs.py
 	python prepare_test_libs.py

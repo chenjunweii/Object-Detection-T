@@ -7,16 +7,15 @@ tvm_root
 *nd
 *so
 *json
+*.mp4
 lib*
-<<<<<<< HEAD
 dog*
 *bin
+test_tvm_ssd
 *jpg
 *lib
 *graph
 model
 model*
-
-=======
->>>>>>> c1d8e3cb46023edce2f6506000cd6914170b4e01
- __pycache__
+__pycache__
+*weights

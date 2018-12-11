@@ -13,6 +13,8 @@ class TVMExecutor {
 
 	public:
 
+		inline TVMExecutor();
+
 		inline TVMExecutor(string network,
 				map <string, vector <int64_t>> & inshapes,
 				map <string, vector <int64_t>> & outshapes,
@@ -22,12 +24,11 @@ class TVMExecutor {
 
 		inline void Load(string node, DLTensor * in, bool copy);
 
-		inline void Get(string node, vector <float> & out);
+		inline void Get(string node, vector <float> & out, bool True);
 
 		inline void Forward();
 
-		inline void GetOutput();
-		//inline execute();
+		inline void GetOutput(bool True);
 
 		TVMByteArray params;
 

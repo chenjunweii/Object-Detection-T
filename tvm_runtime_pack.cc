@@ -59,6 +59,8 @@
 #include "tvm_root/src/runtime/cuda/cuda_device_api.cc"
 #include "tvm_root/src/runtime/cuda/cuda_module.cc"
 #include "tvm_root/src/contrib/sort/sort.cc"
+//#include "tvm_root/src/contrib/cudnn/conv_forward.cc"
+//#include "tvm_root/src/contrib/cudnn/cudnn_utils.cc"
 
 // Uncomment the following lines to enable OpenCL
 // #include "tvm_root/src/runtime/opencl/opencl_device_api.cc"

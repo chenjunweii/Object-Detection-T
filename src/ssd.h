@@ -54,7 +54,11 @@ namespace detector {
 			
 			vector <string> nms_out_node = {"nms0_output"};
 			
+<<<<<<< HEAD
 			TVMExecutor * det, * nms;
+=======
+			TVMExecutor * det, * nms;//(det_network, det_in, det_out, det_out_node, device);
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 			
 			deque <Mat> OriginalQueue, ReSizedQueue;
 			

@@ -28,8 +28,11 @@ parser.add_argument('--remote', action = 'store_true', help = 'ReCompile')
 
 parser.add_argument('--device', type = str, help = 'Select Tuner')
 
+<<<<<<< HEAD
 parser.add_argument('--size', type = int, help = 'Select Tuner')
 
+=======
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 args = parser.parse_args()
 
 target_host = None
@@ -49,6 +52,11 @@ else:
 
 if args.board == 'tx2':
 
+<<<<<<< HEAD
+=======
+    #target = tvm.target.create('llvm -device=arm_cpu -target=aarch64-linux-gnu')
+
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
     if args.device == 'cpu':
         target = 'llvm'
     elif args.device == 'gpu':
@@ -69,6 +77,7 @@ elif args.local:
 
     runner = autotvm.LocalRunner(number = 20, repeat = 3, timeout = 4)
 
+<<<<<<< HEAD
 if args.dtype == 'float32':
 
     log_filename = 'log/{}-{}.{}.{}.log'.format(args.network, args.size, args.board, args.device)
@@ -76,6 +85,9 @@ if args.dtype == 'float32':
 elif args.dtype == 'float16':
     
     log_filename = 'log/{}-{}.{}.{}.fp16.log'.format(args.network, args.size, args.board, args.device)
+=======
+log_filename = '{}.{}.{}.log'.format(args.network, args.board, args.device)
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
 print('[*] Log File : ', log_filename)
 

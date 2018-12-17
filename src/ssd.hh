@@ -128,7 +128,11 @@ void ssd::detect_thread(){
 		ReSizedQueue.shrink_to_fit();
 		mResizedQueue.unlock();
 		
+<<<<<<< HEAD
 		det->Load("data", resized, "NHWC");
+=======
+		det->Load("data", resized);
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 		det->Forward();
 		det->GetOutput(false);
 		
@@ -186,7 +190,11 @@ void ssd::detect_image(string sin){
 	resize(in, resized, Size(size.width, size.height));
 	cvtColor(resized, resized, CV_BGR2RGB);
 
+<<<<<<< HEAD
 	det->Load("data", resized, "NHWC");
+=======
+	det->Load("data", resized);
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 	det->Forward();
 	det->GetOutput(false);
 	

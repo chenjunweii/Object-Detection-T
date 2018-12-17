@@ -64,6 +64,7 @@ test_flt_exe : test_tvm_flt_exe.cc lib/libtvm_runtime_pack.o src/*
 test_tvm_ssd : test_tvm_ssd.cc lib/libtvm_runtime_pack.o src/*
 	@mkdir -p $(@D)
 	$(CXX) $(PKG_CFLAGS) -o $@  $^ $(PKG_LDFLAGS) -lcudart -lcublas -lcuda $(LIBRARY)
+<<<<<<< HEAD
 
 test_tvm_yolo : test_tvm_yolo.cc lib/libtvm_runtime_pack.o src/*h src/darknet/image.hh src/darknet/yolo.hh
 	@mkdir -p $(@D)
@@ -71,6 +72,8 @@ test_tvm_yolo : test_tvm_yolo.cc lib/libtvm_runtime_pack.o src/*h src/darknet/im
 test_darknet_lib : test_darknet_lib.cc src/darknet/image.hh
 	@mkdir -p $(@D)
 	$(CXX) $(PKG_CFLAGS) -o $@  $^ $(PKG_LDFLAGS) $(LIBRARY)
+=======
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 # The code library built by TVM
 lib/test_addone_sys.o: prepare_test_libs.py
 	python prepare_test_libs.py

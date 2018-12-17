@@ -50,6 +50,10 @@ int main(){
 	//s.detect_image("dog1.jpg");
 	//
 	
+<<<<<<< HEAD
+=======
+	
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 	string video = "123.mp4";
 	
 	DetectType dt = DetectType::video;

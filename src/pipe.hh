@@ -4,8 +4,12 @@
 #include <numeric>
 using namespace std;
 
+<<<<<<< HEAD
 TVMPipe::TVMPipe(vector <int64_t> & _shape, string device, string dtype = "float32",
 			int _device_id = 0) : shape(_shape), device_id(_device_id) {
+=======
+TVMPipe::TVMPipe(vector <int64_t> & _shape, string device, string dtype = "float32", int _device_id = 0) : shape(_shape), device_id(_device_id) {
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
 	size = accumulate(_shape.begin(), _shape.end(), 1, multiplies <int64_t> ());
 	
@@ -42,6 +46,19 @@ TVMPipe::TVMPipe(Mat & in, string device, string dtype = "float32", int device_i
 
 	ndim = 4;
 
+<<<<<<< HEAD
+=======
+	//shape = new int64_t [ndim];
+/*
+	shape[0] = b;
+
+	shape[1] = c;
+
+	shape[2] = h;
+
+	shape[3] = w;*/
+
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 	if (device.compare("gpu") == 0)
 
 		device_type = kDLGPU;
@@ -79,6 +96,7 @@ TVMPipe::~TVMPipe(){
 
 void TVMPipe::FloatArrayToTVMArray(float * fdata, DLTensor * tensor){
 
+<<<<<<< HEAD
 	cout << "123124 " << endl;
 
 	TVMArrayCopyFromBytes(tensor, fdata, bytesize);
@@ -113,6 +131,13 @@ void TVMPipe::MatToTVMArray(Mat & in, DLTensor * tensor, string & format){
 		//MatToFloatArrayYolo(in, fdata);
 
 	}
+=======
+	Mat f32;
+
+	in.convertTo(f32, CV_32FC2);
+
+	TVMArrayCopyFromBytes(tensor, f32.data, bytesize);
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
 }
 /*
@@ -150,8 +175,13 @@ void TVMPipe::MatToFloatArray(Mat & in, vector <float> & out){
 
 			for (int _w = 0; _w < w; ++ _w) {
 
+<<<<<<< HEAD
 				out[cbase + hbase + _w] = (static_cast <int> (in.data[(hbase + _w ) * c + _c]));
 				//out[cbase + hbase + _w] = (static_cast <float> (in.data[cbase + hbase + _w]));
+=======
+				//out[cbase + hbase + _w] = (static_cast <int> (in.data[(hbase + _w ) * c + _c]));
+				out[cbase + hbase + _w] = (static_cast <float> (in.data[cbase + hbase + _w]));
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 			}
 		}
 	}

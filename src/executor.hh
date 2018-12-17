@@ -140,6 +140,7 @@ void TVMExecutor::Load(string node, Mat & in, string format){
 
 	//TVMSynchronize(kDLGPU, 0, NULL);
 
+<<<<<<< HEAD
 	pipes[node].MatToTVMArray(in, nds[node], format);
 
 	module_set_input(node, nds[node]);
@@ -151,6 +152,11 @@ void TVMExecutor::Load(string node, float * fdata){
 	pipes[node].FloatArrayToTVMArray(fdata, nds[node]);
 	
 	module_set_input(node, nds[node]);
+=======
+	pipes[node].MatToTVMArray(in, nds[node]);
+
+	module_set_input(node, nds[node]);
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 }
 
 void TVMExecutor::Load(string node, DLTensor * in, bool copy = false){

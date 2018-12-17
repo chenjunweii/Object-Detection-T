@@ -2,7 +2,7 @@
 
 目前看起來 TVM 是可以直接從 mxnet 的 json 讀取 symbol，並從 params 讀取參數
 
-使用  mx.symbol.load_checkpoint 這個函數讀取出來的會長這個樣子
+使用  mx.symbol.load_checkpoint **這個函數讀取出來的會長這個樣子**
 
 ```python
 out, arg_params, aux_params = mx.model.load_checkpoint(network, epochs)
@@ -108,7 +108,7 @@ Return type:	dict of str to NDArray
 
 
 
-#Load Model
+# Load Model
 
 ```python
 tvm.module.load(path, fmt='')
@@ -226,6 +226,206 @@ https://docs.tvm.ai/dev/nnvm_json_spec.html?highlight=json
 
 
 
+# 重要
+
+這邊有 c++ load params 的方法
+
 # Deploy NNVM Modules
 
 https://docs.tvm.ai/deploy/nnvm.html#deploy-as-system-module
+
+https://docs.tvm.ai/deploy/nnvm.html
+
+
+
+
+
+# Load Data to GPU
+
+```c++
+int result = TVMArrayCopyFromBytes(x, fdata, 3 * 224 * 224 * 4);
+```
+
+這邊乘以 4 是因爲 float32 佔 4 個 byte，所以不管我們是用
+
+```c++
+float * fdata = new float [size];
+```
+
+還是
+
+```c++
+vector <float> fdata = vector <float> (size);
+```
+
+在 TVMArrayCopyFromBytes 都要乘以 4
+
+# Get Data GPU
+
+```c++
+int sync =  TVMSynchronize (device_type, device_id, stvm);
+
+int result = TVMArrayCopyToBytes(y, fdata.data(), 1 * 7 * 222 * 222 * 4);
+```
+
+從 GPU 讀取 Forward 後的資料到 CPU，一樣要乘以 4
+
+
+
+
+
+
+
+
+
+
+
+# Script
+
+run.py : 基本的 tvm 用法
+
+run_det_gpu : 沒有 nms 的部分的 ssd 
+
+run_nms_cpu : 輸入是從 ssd 的 multi_feature_layer 出來的三個 symbol
+
+會各自讀取 -det.json
+
+和 nms-json
+
+至於 nms-json 和 -det.json 的生成就要去 mxnet/example/ssd 用 split_ssd.py
+
+from_darknet_tx2 是在 x86下 compile yolov3 到 tx2
+
+
+
+TVM 記錄
+
+每次 TVMCopy後最好還是使用 set_input 比較好
+
+如果想要複製一個 TVMArray 到另一個 TVMArray
+
+可以用 TVMArrayCopyFromTo
+
+也可以直接用 = 這樣就是使用 Reference
+
+
+
+Mat To TVM 的方法
+
+因爲在神經網路的部分需要使用 float32 ，但是 opencv 預設讀取的是 uint8
+
+所以我們要使用 convertTo 轉換
+
+```c++
+Mat f32;
+
+in.convertTo(f32, CV_32FC2);
+
+TVMArrayCopyFromBytes(tensor, (float *) f32.data, bytesize); 
+```
+
+或是也可以使用 vector 自己 copy
+
+但是實際上測試過後發現使用 converTo 的效率較高就不特別自己寫了，如果自己寫
+
+```c++
+void TVMPipe::MatToFloatArray(Mat & in, vector <float> & out){
+	int cbase, hbase = 0;
+	for (int _c = 0; _c < c; ++ _c) {
+		cbase = _c * h * w;
+		for (int _h = 0; _h < h; ++ _h) {
+    		hbase = h * _h;
+			for (int _w = 0; _w < w; ++ _w) {
+				//out[cbase + hbase + _w] = (static_cast <int> (in.data[(hbase + _w ) * c + _c]));
+				out[cbase + hbase + _w] = (static_cast <float> (in.data[cbase + hbase + _w]));
+			}
+		}
+	}
+}
+
+```
+
+必須 cast 到 float 因爲我們是存在 float vector 裡
+
+
+
+# 關於 Transpose
+
+本來 opencv 的 shape 是 (1, 512, 512, 3), 
+
+mxnet 的 shape 是 (1, 3, 512, 512) 所以都必須轉換，我一開始是使用上面 comment 掉的部分來做轉換，但是之後發現只要在 Symbol 的前面事先轉換就行了
+
+以下是 Inception V3 的程式碼，我們加入一個條件如果是要 Deploy 成 TVM 的 Model 就做 Transpose 和減 Mean
+
+所以之後有改新的網路，在 Deploy 的時候也必須加上這組 Code，並把新的 symbol.json 複製到 Tuner/model 下，之後再用腳本把 Mxnet Graph 轉成 nnvm Graph。再做 Compile
+
+```python
+if tvm: 
+    print('[*] Get TVM Deploy Symbol')         
+	mean = mx.symbol.Variable(name = "mean")
+	data = mx.symbol.transpose(data, [0, 3, 1, 2])
+	data = mx.symbol.broadcast_sub(data, mean)
+```
+
+
+
+# Int 8 , Float 16
+
+由於 TX2 不支援 CUDA int 8 所以只能使用 Float16
+
+但 Float 16 在 TVM 的 CUDA 轉換上也有些許問題
+
+所以目前能轉換的只有 CPU - Float16
+
+
+
+# Remote
+
+加入了 Remote RPC Tuning
+
+因爲每個裝置的架構都不太一樣，就算都是使用 CUDA 裡面也會不一樣，所以我們必須在 TX2 上 Tune 一次，或是使用Remote Tuning，
+
+在 TX2 上的 Remote Tuning CPU 是可以的，不過 CUDA 的部分就有些問題，好在目前我直接在 TX2 Local Tune CUDA
+
+
+
+# Detection
+
+到時候會加入 GPU Inference 和 CPU Inference，不過目前還不知道速度差多少
+
+目前還在 Tune ssd-inceptionv3-gpu.tx2 
+
+
+
+# Extension
+
+在 x86 compile 成 arm 時，如果 export libarary 有問題時可以試試看 export 成 .tar
+
+
+
+# 嘗試
+
+mobilenet 的優化
+
+yolov3 優化，目前只能從 x86 compile 到 arm，但是我們沒有 nnvm graph 的形式，如果不能 Remote Tune 的話就一定要想辦法弄到 yolov3 nnvm graph 
+
+
+
+
+
+
+
+如果發生 index 裡　set_dtype 出現 None 可能是因爲
+
+nnvm/python/nnvm/compiler/graph_attr.py  
+
+infer_dtype 時發生問題，可以把 dtype用 items 顯示出來，把是 None 的地方改成 float32 之類的
+
+
+
+結果最後發現是 params 要輸入 nnvm.compiler.build，就算是 tvm.ndarray 也可以
+
+# NNVM Graph <-> NNVM Symbol
+
+
+

@@ -1,3 +1,6 @@
+#ifndef FLT_EXECUTOR_HH
+#define FLT_EXECUTOR_HH
+
 #include <iostream>
 #include <fstream>
 #include "executor.h"
@@ -7,6 +10,7 @@
 using namespace tvm::runtime;
 using namespace std;
 
+TVMExecutor::TVMExecutor(){};
 
 TVMExecutor::TVMExecutor(string network, map <string,
 		vector <int64_t>> & inshapes,
@@ -81,26 +85,15 @@ TVMExecutor::TVMExecutor(string network, map <string,
 	for (auto & s : inshapes){
 
 		nds[s.first] = nullptr;
-
-		//cout << "after pipe " << endl;
-
-		//int64_t shape[4] = {1, 3, 512, 512};//[s.second.size()] = int64_t[s.second.size()];
-		//int64_t shape[4] = {1, 3, 512, 512};//[s.second.size()] = int64_t[s.second.size()];a
-
-		TVMArrayAlloc(s.second.data(), s.second.size(), dtype_code, dtype_bits, dtype_lanes, device_type, device_id, & nds[s.first]);
-		//TVMArrayAlloc(shape, s.second.size(), dtype_code, dtype_bits, dtype_lanes, device_type, device_id, & nds[s.first]);
+		
+		TVMArrayAlloc(s.second.data(), s.second.size(), dtype_code,
+				dtype_bits, dtype_lanes, device_type, device_id, & nds[s.first]);
 
 		pipes[s.first] = TVMPipe(s.second, device, dtype, device_id);
-
-		//auto fsize = accumulate(begin(s.second), end(s.second), 1, std::multiplies <int64_t> () );
-
-		//fs[s.first] = vector <float> (fsize);
 
 		module_set_input(s.first, nds[s.first]);
 
 	}
-
-	
 
 	for (auto & o : outshapes){
 
@@ -143,12 +136,21 @@ TVMExecutor::TVMExecutor(string network, map <string,
 
 }
 
-void TVMExecutor::Load(string node, Mat & in){
+void TVMExecutor::Load(string node, Mat & in, string format){
 
-	pipes[node].MatToTVMArray(in, nds[node]);
+	//TVMSynchronize(kDLGPU, 0, NULL);
+
+	pipes[node].MatToTVMArray(in, nds[node], format);
 
 	module_set_input(node, nds[node]);
+}
 
+
+void TVMExecutor::Load(string node, float * fdata){
+
+	pipes[node].FloatArrayToTVMArray(fdata, nds[node]);
+	
+	module_set_input(node, nds[node]);
 }
 
 void TVMExecutor::Load(string node, DLTensor * in, bool copy = false){
@@ -164,6 +166,8 @@ void TVMExecutor::Load(string node, DLTensor * in, bool copy = false){
 	}
 
 	else{
+
+		cout << "In Load Copy False" << endl;
 		
 		nds[node] = in;
 	}
@@ -176,36 +180,29 @@ void TVMExecutor::Load(string node, DLTensor * in, bool copy = false){
 
 }
 
-void TVMExecutor::Get(string node, vector <float> & out){
-
+void TVMExecutor::Get(string node, vector <float> & out, bool Float = false){
 	module_get_output(output_index[node], nds[node]);
-
-	pipes[node].TVMArrayToFloatArray(nds[node], out);
+	if (Float)
+		pipes[node].TVMArrayToFloatArray(nds[node], out);
 
 }
 
 
-void TVMExecutor::GetOutput(){
-
+void TVMExecutor::GetOutput(bool Float = false){
 	for (auto & o : output){
-
-		Get(o, fs[o]);		
+		Get(o, fs[o], Float);		
 	}
 }
 
 
 TVMExecutor::~TVMExecutor(){
-
 	for (auto & nd : nds)
-
 		TVMArrayFree(nd.second);
 }
 
 
 void TVMExecutor::Forward(){
-
 	execute();
-	
 }
 
 
@@ -214,3 +211,4 @@ void TVMExecutor::Show(string node){
 
 
 }
+#endif

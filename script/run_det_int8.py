@@ -19,69 +19,51 @@ from time import time
 
 tgt_host = "llvm"
 
-ctx = tvm.gpu(0)
+ctx = tvm.cpu(0)
 
 #yyptarget = tvm.target.cuda()
-target = 'cuda'
+target = 'llvm'
 #target = 'cuda'
 
 shapes = (1, 512, 512, 3)
 
-#net, params = load_mxnet_model('deploy_ssd_mobilenet_v2_680-det', 240, 'model')
-#net, params = load_mxnet_model('deploy_ssd_resnext50_512-det', 57, 'model')
-#net, params = load_mxnet_model('deploy_ssd_resnet50_512-det', 0, 'model')
-net, params = load_mxnet_model('deploy_ssd_inceptionv3_512-det', 215, 'model')
+net, params = load_mxnet_model('deploy_ssd_inceptionv3_int8_512-det', 215, 'model')
 
 r, g, b = 123, 117, 104 
 
-#params['mean'] = nd.array(np.array([r, g, b]).astype(np.uint8).reshape([1, 3, 1, 1]))
-params['mean'] = nd.array(np.array([r, g, b]).reshape([1, 3, 1, 1]))
+params['mean'] = nd.array(np.array([r, g, b]).astype(np.int8).reshape([1, 3, 1, 1]))
 
 net, params = nnvm.frontend.from_mxnet(net, params)
 
-inputs = np.ones(shapes)
-
 print("[*] Compile...")
 
-with autotvm.apply_history_best('log/ssd-inceptionv3.log'):
-    with compiler.build_config(opt_level = 3):
-        graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params)
-    #graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params, dtype = dtypes)
-    #graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params, dtype = {'data' : 'uint8', 'mean' : 'uint8'})
+#with autotvm.apply_history_best('log/ssd-inceptionv3.log'):
+with compiler.build_config(opt_level = 3):
+    graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, dtype = 'int8')
 
-
-#out = 'ssd-mobilenetv2-680-det'
-#out = 'ssd-resnetx50-512-det'
-#out = 'ssd-resnet50-512-det'
-
-out = 'ssd-inceptionv3-512-det'
+out = 'ssd-inceptionv3-512-int8-det'
 
 lib.export_library('so/{}.tvm.so'.format(out))
-#lib.export_library('so/{}.tvm.so'.format('ssd-inceptionv3-512-det'))
 
 print('[*] Model is Compiled')
 
 m = graph_runtime.create(graph, lib, ctx)
 
-save_tvm_params('params/{}'.format(out), params)
+#save_tvm_params('params/{}'.format(out), params)
 
-save_tvm_graph('graph/{}'.format(out), graph)
+#save_tvm_graph('graph/{}'.format(out), graph)
 
 print('[*] Graph RunTime is Created')
 
-m.set_input('data', tvm.nd.array(inputs.astype(np.float32))) # astype
+inputs = np.zeros(shapes).astype(np.int8)
 
-m.set_input(**params)
+m.set_input('data', tvm.nd.array(inputs)) # astype
+
+#m.set_input(**params)
 
 print('[*] Run ')
 
 total = 0
-
-inputs = inputs.astype(np.float32)
-
-ndinputs = tvm.nd.array(inputs)
-
-m.set_input('data', ndinputs)
 
 for i in range(10):
 

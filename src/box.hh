@@ -1,9 +1,13 @@
+#ifndef BOX_H
+#define BOX_H
+
+
 #include "box.h"
 #include "utils.hh"
 
-bbox::bbox(){};
+flt::bbox::bbox(){};
 
-bbox::bbox(vector <float> & fout, Size & size){
+flt::bbox::bbox(vector <float> & fout, Size & size){
 
 	c = int(fout[0]); s = fout[1];
 
@@ -16,7 +20,9 @@ bbox::bbox(vector <float> & fout, Size & size){
 	x1 = clip(int(fout[4] * w), 0, w); y1 = clip(int(fout[5] * h), 0, h);
 }
 
-bbox::bbox(float c, float s, float x, float y, float x1, float y1){
+flt::bbox::bbox(float c, float s, float x, float y, float x1, float y1){
 
 }
 
+
+#endif

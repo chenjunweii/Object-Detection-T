@@ -13,51 +13,39 @@ from build import get_network
 from utils import save_tvm_graph, save_tvm_params
 
 class tuner(object):
+    
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
-        self.net, self.params, self.input_shape, self.out_shape = get_network(self.network, batch_size = 1)
+        self.net, self.params, self.input_shape, self.out_shape = get_network(self.network, batch_size = 1, input_size = self.input_size)
+    
     def tune(self):
         print("[*] Extract tasks...")
-
-        """
-        self.tasks = autotvm.task.extract_from_graph(self.net, target = self.target,
-                                                shape = {'data': self.input_shape}, dtype = self.dtype,
-                                                symbols = (nnvm.sym.conv2d,
-                                                    nnvm.sym.dense))
+        print('Target Host : ', self.target_host)
+        #"""
+        self.tasks = autotvm.task.extract_from_graph(self.net, target = self.target, target_host = self.target_host,
+                shape = {'data': self.input_shape, 'mean' : (1, 3, 1, 1)}, dtype = self.dtype,
+                                                symbols = (nnvm.sym.conv2d, nnvm.sym.dense))
                                                     #nnvm.symbol.multibox_prior,
                                                     #nnvm.symbol.multibox_transform_loc,
                                                     #nnvm.symbol.nms))
+        #"""
 
 
-        """
         # run tuning tasks
         print("[*] Tuning...")
 
         #if not self.recompile:
-        #    self.tune_tasks()
+        self.tune_tasks()
 
-        # compile kernels with history best records
-
-        #print(self.net.list_output_names())
-        #print(self.net.list_input_names())
-        #print(self.net.debug_str())
-
-
-        types = dict()
-
-        types['data'] = 'float32'
-        
-        #types['multibox_transform_loc0'] = 'int32'
-
-        #with autotvm.apply_history_best(self.log_filename):
         print("[*] Compile...")
+        #with autotvm.apply_history_best(self.log_filename):
         with nnvm.compiler.build_config(opt_level = 3):
             graph, lib, params = nnvm.compiler.build(
                 self.net,
-                target = self.target,
-                target_host = 'llvm',
-                shape = {'data': self.input_shape},
+                self.target,
+                target_host = self.target_host,
+                shape = {'data': self.input_shape, 'mean' : (1, 3, 1, 1)},
                 params = self.params,
                 dtype = self.dtype)
 

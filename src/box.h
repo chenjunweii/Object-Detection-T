@@ -6,6 +6,9 @@
 
 using namespace std;
 
+
+namespace flt{
+
 struct bbox {
 
 	public:
@@ -27,6 +30,8 @@ struct bbox {
 		int x1 = 0;
 
 		int y1 = 0;
+
+};
 
 };
 

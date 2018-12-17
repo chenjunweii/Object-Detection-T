@@ -1,3 +1,7 @@
+#ifndef DETECTOR_HH
+#define DETECTOR_HH
+
+
 #include "tvm.h"
 #include "box.h"
 #include "detector.h"
@@ -5,21 +9,34 @@
 #include <unistd.h>
 #include <boost/format.hpp>      
 
-inline void convert(vector <float> & fout, vector <vector <bbox>> & bboxes, Size & size_){
+inline void convert(vector <float> & fout, vector <vector <flt::bbox>> & bboxes, Size & size_){
 
 	vector <float> slice;
 	for (int i = 0; i != 1; ++i){
-			(bboxes).emplace_back(vector <bbox> ());
+			(bboxes).emplace_back(vector <flt::bbox> ());
 		for (int j = 0; j != 5186; ++j){
 			slice = vector <float> (fout.begin() + j * 6, fout.begin() + j * 6 + 6);
 			if (slice[0] >= 0){
-				(bboxes)[i].emplace_back(move(bbox(slice, size_)));
+				(bboxes)[i].emplace_back(move(flt::bbox(slice, size_)));
 			}
 		}
 	}
 }
 
-inline int visualize(Mat & in, vector <vector <bbox>> & bboxes, vector <string> & classes, float threshold){
+inline void convert(float * fout, vector <vector <flt::bbox>> & bboxes, Size & size_){
+
+	vector <float> slice;
+	for (int i = 0; i != 1; ++i){
+			(bboxes).emplace_back(vector <flt::bbox> ());
+		for (int j = 0; j != 5186; ++j){
+			slice = vector <float> (fout + j * 6, fout + j * 6 + 6);
+			if (slice[0] >= 0){
+				(bboxes)[i].emplace_back(move(flt::bbox(slice, size_)));
+			}
+		}
+	}
+}
+inline int visualize(Mat & in, vector <vector <flt::bbox>> & bboxes, vector <string> & classes, float threshold){
 		assert(bboxes.size() == 1); // assert batch size = 1
 		for (auto & box : bboxes[0]){
 			if (box.s >= threshold){
@@ -40,3 +57,4 @@ inline int visualize(Mat & in, vector <vector <bbox>> & bboxes, vector <string> 
 		//cv::waitKey(0);
 }
 
+#endif

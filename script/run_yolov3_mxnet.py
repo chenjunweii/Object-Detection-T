@@ -22,15 +22,16 @@ tgt_host = "llvm"
 ctx = tvm.gpu(0)
 
 #yyptarget = tvm.target.cuda()
-target = 'cuda'
+target = 'cuda -libs=cudnn'
 #target = 'cuda'
 
-shapes = (1, 512, 512, 3)
+net, params = load_mxnet_model('yolo3_darknet53_voc', 0, 'model')
 
-#net, params = load_mxnet_model('deploy_ssd_mobilenet_v2_680-det', 240, 'model')
-#net, params = load_mxnet_model('deploy_ssd_resnext50_512-det', 57, 'model')
-#net, params = load_mxnet_model('deploy_ssd_resnet50_512-det', 0, 'model')
-net, params = load_mxnet_model('deploy_ssd_inceptionv3_512-det', 215, 'model')
+net = net.get_children()[0].get_children()[0].get_children()[0].get_children()[0].get_children()[0].get_children()[0]
+
+net, params = nnvm.frontend.from_mxnet(net, params)
+
+input_shape = (1, 3, 416, 416)
 
 r, g, b = 123, 117, 104 
 
@@ -43,21 +44,16 @@ inputs = np.ones(shapes)
 
 print("[*] Compile...")
 
-with autotvm.apply_history_best('log/ssd-inceptionv3.log'):
-    with compiler.build_config(opt_level = 3):
-        graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params)
+#with autotvm.apply_history_best('log/ssd-inceptionv3.log'):
+with compiler.build_config(opt_level = 3):
+    graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params)
     #graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params, dtype = dtypes)
     #graph, lib, params = compiler.build(net, target, {"data": shapes, "mean" : (1, 3, 1, 1)}, params = params, dtype = {'data' : 'uint8', 'mean' : 'uint8'})
 
 
-#out = 'ssd-mobilenetv2-680-det'
-#out = 'ssd-resnetx50-512-det'
-#out = 'ssd-resnet50-512-det'
-
-out = 'ssd-inceptionv3-512-det'
+out = 'yolov3-det'
 
 lib.export_library('so/{}.tvm.so'.format(out))
-#lib.export_library('so/{}.tvm.so'.format('ssd-inceptionv3-512-det'))
 
 print('[*] Model is Compiled')
 

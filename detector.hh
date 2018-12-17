@@ -133,7 +133,7 @@ inline int detector::post(bool viz){
 			get = mBoxesQueue.try_lock();
 		}
 
-		vector <vector <bbox>> boxes = move(BoxesQueue.front());
+		vector <vector <flt::bbox>> boxes = move(BoxesQueue.front());
 		BoxesQueue.pop_front();
 		BoxesQueue.shrink_to_fit();
 		mBoxesQueue.unlock();
@@ -198,7 +198,7 @@ inline int detector::detect(int tid){
 	int no;
 	bool get = false;
 	string stid = to_string(tid);
-	vector <vector <bbox>> boxes;
+	vector <vector <flt::bbox>> boxes;
 	alive[stid] = true;
 	while (true){
 		no = request();
@@ -232,7 +232,7 @@ detector::~detector(){
 		delete e;
 }
 
-inline void detector::convert(vector <NDArray> & ndout, vector <vector <bbox>> & bboxes, Size & size_){
+inline void detector::convert(vector <NDArray> & ndout, vector <vector <flt::bbox>> & bboxes, Size & size_){
 
 	vector <mx_uint> shape = ndout[0].GetShape(); // batach, ndets, 6
 	int fsize = shape[0] * shape[1] * shape[2];
@@ -241,17 +241,17 @@ inline void detector::convert(vector <NDArray> & ndout, vector <vector <bbox>> &
 	NDArray::WaitAll();
 	vector <float> slice;
 	for (int i = 0; i != shape[0]; ++i){
-		(bboxes).emplace_back(vector <bbox> ());
+		(bboxes).emplace_back(vector <flt::bbox> ());
 		for (int j = 0; j != shape[1]; ++j){
 			slice = vector <float> (fout.begin() + j * 6, fout.begin() + j * 6 + 6);
 			if (slice[0] >= 0){
-				(bboxes)[i].emplace_back(move(bbox(slice, size_)));
+				(bboxes)[i].emplace_back(move(flt::bbox(slice, size_)));
 			}
 		}
 	}
 }
 
-inline int detector::visualize(cv::Mat & in, vector <vector <bbox>> & bboxes){
+inline int detector::visualize(cv::Mat & in, vector <vector <flt::bbox>> & bboxes){
 
 		assert(bboxes.size() == 1); // assert batch size = 1
 		for (auto & box : bboxes[0]){

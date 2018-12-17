@@ -11,6 +11,10 @@ class TVMPipe {
 
 		int size, bytesize;
 
+		bool image;
+
+		string format;
+
 		vector <int64_t> shape;
 
 		int dtype_code, dtype_bits, dtype_lanes, device_type, device_id, ndim;
@@ -23,9 +27,11 @@ class TVMPipe {
 
 		inline ~ TVMPipe();
 
-		inline void MatToTVMArray(Mat & in, DLTensor * out);
+		inline void MatToTVMArray(Mat & in, DLTensor * out, string & format);
 
 		inline void TVMArrayToFloatArray(DLTensor * in, vector <float> & out);
+
+		inline void FloatArrayToTVMArray(float * fdata, DLTensor * out);
 
 	private:
 

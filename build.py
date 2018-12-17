@@ -5,9 +5,10 @@ from nnvm import testing
 from tvm import autotvm
 from tvm.contrib.util import tempdir
 from tvm.autotvm.tuner import XGBTuner, GATuner, RandomTuner, GridSearchTuner
-from load_deploy_model import load_model, load_mxnet_model
+from tool.load_deploy_model import load_model, load_mxnet_model
+from utils import *
 
-def get_network(name, batch_size):
+def get_network(name, batch_size, input_size):
     """Get the symbol definition and random weight of a network"""
     input_shape = (batch_size, 3, 224, 224)
     output_shape = (batch_size, 1000)
@@ -26,13 +27,108 @@ def get_network(name, batch_size):
         #input_shape = (1, 3, 512, 512)
         net, params = nnvm.testing.inception_v3.get_workload(batch_size=batch_size)
 
-    elif name == 'ssd-inceptionv3':
+    elif name == 'ssd-mobilenetv2':
 
-        net, params = load_mxnet_model('deploy_ssd_inceptionv3_512', 215, 'model')
+        net, params = load_mxnet_model('deploy_ssd_mobilenet_v2_680-det', 240, 'model')
 
         net, params = nnvm.frontend.from_mxnet(net, params)
 
-        input_shape = (1, 3, 512, 512)
+<<<<<<< HEAD
+        input_shape = (1, input_size, input_size, 3)
+=======
+        input_shape = (1, 680, 680, 3)
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
+
+        output_shape = None
+
+    elif name == 'ssd-inceptionv3-nms':
+
+        net, params = load_mxnet_model('deploy_ssd_inceptionv3_512-det', 215, 'model')
+
+        net, params = nnvm.frontend.from_mxnet(net, params)
+
+        input_shape = (1, 512, 512, 3)
+
+        output_shape = None
+
+    elif name == 'ssd-inceptionv3':
+
+        net, params = load_mxnet_model('deploy_ssd_inceptionv3_512-det', 215, 'model')
+
+        net, params = nnvm.frontend.from_mxnet(net, params)
+
+<<<<<<< HEAD
+        input_shape = (1, input_size, input_size, 3)
+=======
+        input_shape = (1, 512, 512, 3)
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
+
+        output_shape = None
+
+    elif name == 'ssd-inceptionv3-fp16':
+
+        net, params = load_mxnet_model('deploy_ssd_inceptionv3_fp16_512-det', 215, 'model')
+
+        net, params = nnvm.frontend.from_mxnet(net, params)
+
+        input_shape = (1, 512, 512, 3)
+
+        output_shape = None
+
+
+    elif name == 'yolov3-darknet':
+
+        ins = 'yolov3.x86.gpu'
+
+        graph = load_tvm_graph('graph/{}'.format(ins))
+
+        params = load_tvm_params('params/{}'.format(ins))
+
+        net = graph.symbol
+
+        input_shape = (1, 3, 608, 608)
+        
+        output_shape = None
+
+<<<<<<< HEAD
+    elif name == 'yolov3-darknet-320':
+
+        ins = 'yolov3-darknet-320.x86.gpu'
+
+        graph = load_tvm_graph('graph/{}'.format(ins))
+
+        params = load_tvm_params('params/{}'.format(ins))
+
+        net = graph.symbol
+
+        input_shape = (1, 3, 320, 320)
+        
+        output_shape = None
+    
+    elif name == 'yolov3-darknet-tiny':
+
+        ins = 'yolov3-darknet-tiny.x86.gpu'
+
+        graph = load_tvm_graph('graph/{}'.format(ins))
+
+        params = load_tvm_params('params/{}'.format(ins))
+
+        net = graph.symbol
+
+        input_shape = (1, 3, 224, 224)
+        
+        output_shape = None
+
+    elif name == 'yolov3-mxnet':
+=======
+    elif name == 'yolov3-darnknet':
+>>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
+
+        net, params = load_mxnet_model('yolo3_darknet53_voc', 0, 'model')
+
+        net, params = nnvm.frontend.from_mxnet(net, params)
+
+        input_shape = (1, 3, 416, 416)
 
         output_shape = None
     

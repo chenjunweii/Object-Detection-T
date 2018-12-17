@@ -1,25 +1,24 @@
 *log
 *pyc
+*ttf
 *tmp
 *tar
+*swp
+*names
 tvm_root
 *params
 *nd
 *so
 *json
+*.mp4
 lib*
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
 dog*
 *bin
+test_tvm_ssd
 *jpg
 *lib
 *graph
 model
 model*
-
-=======
->>>>>>> c1d8e3cb46023edce2f6506000cd6914170b4e01
->>>>>>> 3f3ad4afb2df4ae1fc71d6696cb805881f0911e1
  __pycache__
+*weights

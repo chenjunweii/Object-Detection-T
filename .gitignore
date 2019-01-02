@@ -22,3 +22,8 @@ model
 model*
  __pycache__
 *weights
+*uff
+*pb
+*ckpt*
+*tar.gz
+*ssd_*

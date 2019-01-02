@@ -1,0 +1,148 @@
+#include "src/base.h"
+#include "src/utils.hh"
+#include "src/loader.hh"
+#include "src/detector.hh"
+
+
+//using namespace std;
+//
+
+int main(){
+
+	int N = 1;
+
+	const float visualizeThreshold = 0.5;
+
+	static constexpr int OUTPUT_CLS_SIZE = 91;
+
+	static constexpr int OUTPUT_BBOX_SIZE = OUTPUT_CLS_SIZE * 4;
+
+	char * serialized = nullptr;
+	
+	const char* OUTPUT_BLOB_NAME0 = "NMS";
+
+	const char* INPUT_BLOB_NAME = "Input";
+	
+	IHostMemory * model;
+	
+	IRuntime * runtime;
+	
+	ICudaEngine * engine;
+	
+	PluginFactory plugin;
+	
+	IExecutionContext * context;
+    
+	vector <float> detectionOut(N * detectionOutputParam.keepTopK * 7);
+    
+	vector <int> keepCount(N);
+
+    vector <float> data (N * 3 * 300 * 300);
+
+	flt::load_serialized_model("mobilenet_v2_custom.trt", & serialized, & runtime, & engine, & context, & plugin);
+
+	Mat mm = imread("dog.jpg");
+
+	Mat m(Size(300, 300), CV_8UC3);
+
+	resize(mm, m, Size(300, 300));
+
+	cv::cvtColor(m, m, CV_BGR2RGB);
+
+	MatToTRTArray(m, data);
+	
+    // Input and output buffer pointers that we pass to the engine - the engine requires exactly IEngine::getNbBindings(),
+    // of these, but in this case we know that there is exactly 1 input and 2 output.
+    int nbBindings = engine->getNbBindings();
+
+    std::vector <void *> buffers(nbBindings);
+
+    std::vector <std::pair <int64_t, nvinfer1::DataType>> buffersSizes = calculateBindingBufferSizes(*engine, nbBindings, N);
+	
+    for (int i = 0; i < nbBindings; ++i){
+
+        auto bufferSizesOutput = buffersSizes[i];
+        
+		buffers[i] = samples_common::safeCudaMalloc(bufferSizesOutput.first * samples_common::getElementSize(bufferSizesOutput.second));
+    }
+
+    // In order to bind the buffers, we need to know the names of the input and output tensors.
+    // Note that indices are guaranteed to be less than IEngine::getNbBindings().
+    int inputIndex = engine->getBindingIndex(INPUT_BLOB_NAME),
+        outputIndex0 = engine->getBindingIndex(OUTPUT_BLOB_NAME0),
+        outputIndex1 = outputIndex0 + 1; //engine.getBindingIndex(OUTPUT_BLOB_NAME1);
+
+
+    cudaStream_t stream;
+    
+	CHECK(cudaStreamCreate(&stream));
+
+    // DMA the input to the GPU,  execute the batch asynchronously, and DMA it back:
+    CHECK(cudaMemcpyAsync(buffers[inputIndex], &data[0], N * 3 * 300 * 300 * sizeof(float), cudaMemcpyHostToDevice, stream));
+
+    auto t_start = std::chrono::high_resolution_clock::now();
+    context->execute(N, &buffers[0]);
+    auto t_end = std::chrono::high_resolution_clock::now();
+    float total = std::chrono::duration<float, std::milli>(t_end - t_start).count();
+
+    std::cout << "Time taken for inference is " << total << " ms." << std::endl;
+
+    for (int bindingIdx = 0; bindingIdx < nbBindings; ++bindingIdx) {
+
+        if (engine->bindingIsInput(bindingIdx))
+        
+			continue;
+
+	}
+
+    CHECK(cudaMemcpyAsync(&detectionOut[0], buffers[outputIndex0], N * detectionOutputParam.keepTopK * 7 * sizeof(float), cudaMemcpyDeviceToHost, stream));
+    CHECK(cudaMemcpyAsync(&keepCount[0], buffers[outputIndex1], N * sizeof(int), cudaMemcpyDeviceToHost, stream));
+    cudaStreamSynchronize(stream);
+
+    // Release the stream and the buffers
+    cudaStreamDestroy(stream);
+    CHECK(cudaFree(buffers[inputIndex]));
+    CHECK(cudaFree(buffers[outputIndex0]));
+    CHECK(cudaFree(buffers[outputIndex1]));
+
+    vector <string> CLASSES (OUTPUT_CLS_SIZE);
+
+    populateClassLabels(CLASSES);
+
+	int INPUT_H = 300; 
+
+	int INPUT_W = 300;
+
+    for (int p = 0; p < N; ++p){
+
+        for (int i = 0; i < keepCount[p]; ++i){
+
+            float* det = &detectionOut[0] + (p * detectionOutputParam.keepTopK + i) * 7;
+            if (det[2] < visualizeThreshold) continue;
+
+            // Output format for each detection is stored in the below order
+            // [image_id, label, confidence, xmin, ymin, xmax, ymax]
+            assert((int) det[1] < OUTPUT_CLS_SIZE);
+            std::string storeName = CLASSES[(int) det[1]] + "-" + std::to_string(det[2]) + ".ppm";
+
+			string ppmid = "123";
+            
+			printf("Detected %s in the image %d (%s) with confidence %f%% and coordinates (%f,%f),(%f,%f).\nResult stored in %s.\n", CLASSES[int(det[1])].c_str(), int(det[0]), ppmid, det[2] * 100.f, det[3] * INPUT_W, det[4] * INPUT_H, det[5] * INPUT_W, det[6] * INPUT_H, storeName.c_str());
+
+            //samples_common::writePPMFileWithBBox(storeName, ppms[p], {det[3] * INPUT_W, det[4] * INPUT_H, det[5] * INPUT_W, det[6] * INPUT_H});
+        }
+    }
+
+    // Destroy the engine.
+    context->destroy();
+    engine->destroy();
+    runtime->destroy();
+
+    // Destroy plugins created by factory
+    plugin.destroyPlugin();
+	
+	delete serialized;
+
+    return EXIT_SUCCESS;
+
+}

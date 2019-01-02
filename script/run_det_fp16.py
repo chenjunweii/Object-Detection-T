@@ -25,7 +25,7 @@ ctx = tvm.gpu(0)
 target = 'cuda'
 #target = 'cuda'
 
-shapes = (1, 512, 512, 3)
+shapes = (1, 3, 512, 512)
 
 net, params = load_mxnet_model('deploy_ssd_inceptionv3_fp16_512-det', 215, 'model')
 

@@ -21,10 +21,6 @@ class tuner(object):
     
     def tune(self):
         print("[*] Extract tasks...")
-<<<<<<< HEAD
-=======
-
->>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
         print('Target Host : ', self.target_host)
         #"""
         self.tasks = autotvm.task.extract_from_graph(self.net, target = self.target, target_host = self.target_host,

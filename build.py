@@ -33,11 +33,8 @@ def get_network(name, batch_size, input_size):
 
         net, params = nnvm.frontend.from_mxnet(net, params)
 
-<<<<<<< HEAD
         input_shape = (1, input_size, input_size, 3)
-=======
         input_shape = (1, 680, 680, 3)
->>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
         output_shape = None
 
@@ -57,11 +54,8 @@ def get_network(name, batch_size, input_size):
 
         net, params = nnvm.frontend.from_mxnet(net, params)
 
-<<<<<<< HEAD
         input_shape = (1, input_size, input_size, 3)
-=======
         input_shape = (1, 512, 512, 3)
->>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
         output_shape = None
 
@@ -90,7 +84,6 @@ def get_network(name, batch_size, input_size):
         
         output_shape = None
 
-<<<<<<< HEAD
     elif name == 'yolov3-darknet-320':
 
         ins = 'yolov3-darknet-320.x86.gpu'
@@ -119,10 +112,7 @@ def get_network(name, batch_size, input_size):
         
         output_shape = None
 
-    elif name == 'yolov3-mxnet':
-=======
     elif name == 'yolov3-darnknet':
->>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
         net, params = load_mxnet_model('yolo3_darknet53_voc', 0, 'model')
 

@@ -23,7 +23,7 @@ public:
 
 	mutex mOriginalQueue, mResizedQueue, mBoxesQueue;
 
-	condition_variable cOriginalQueue, cResizedQueue, cBoxesQueue;
+	//condition_variable cOriginalQueue, cResizedQueue, cBoxesQueue;
 
 	DetectType detect_type;
 	
@@ -31,7 +31,7 @@ public:
 
 	map <string, bool> alive;
 	
-	unsigned int wait = 50;
+	unsigned int wait = 100;
 
 	int nbatch, nclass;
 
@@ -43,7 +43,7 @@ public:
 
 	const float visualizeThreshold = 0.5;
 
-	int OUTPUT_BBOX_SIZE;// = nclass * 4;
+	//int OUTPUT_BBOX_SIZE;// = nclass * 4;
 
 	char * serialized = nullptr;
 	
@@ -79,7 +79,7 @@ public:
 
 	ssd(string filename, string _classes, int _nbatch, Size _size) : nbatch(_nbatch), size(_size){
 
-		flt::load_serialized_model("mobilenet_v2_custom.trt", & serialized, & runtime, & engine, & context, & plugin);
+		flt::load_serialized_model(filename, & serialized, & runtime, & engine, & context, & plugin);
 
 		data = vector <float> (nbatch * 3 * size.width * size.height);
 	
@@ -137,45 +137,22 @@ public:
 		} 
 
 		CHECK(cudaMemcpyAsync(buffers[inputIndex], & data[0], bytesize, cudaMemcpyHostToDevice, stream));
+
 	}
 
 
 	inline int unload(){
 
-
 		CHECK(cudaMemcpyAsync(&detectionOut[0], buffers[outputIndex0], nbatch * detectionOutputParam.keepTopK * 7 * sizeof(float), cudaMemcpyDeviceToHost, stream));
+		
 		CHECK(cudaMemcpyAsync(&keepCount[0], buffers[outputIndex1], nbatch * sizeof(int), cudaMemcpyDeviceToHost, stream));
 		
 		cudaStreamSynchronize(stream);
 
 	}
 
-
-	inline int load(Mat & in){
-	
-		CHECK(cudaMemcpyAsync(buffers[inputIndex], & data[0], bytesize, cudaMemcpyHostToDevice, stream));
-	
-	}
-		
-	inline int preprocess(Mat in, Mat out, int idx){
-
-		resize(in, out, size);
-
-		cv::cvtColor(out, out, CV_BGR2RGB);
-
-		//MatToTRTArray(out, data, idx);
-
-	}
-
-	int detect_image(string filename){
-
-		std::cout << " Data Size  " << data.size() << std::endl;
-	}
-
 	int capture_thread(DetectType & dt, string & filename){
 
-		cout << "in Capture Thread " << endl;
-		
 		Mat frame, resized;
 		
 		VideoCapture capture;
@@ -205,52 +182,43 @@ public:
 		int idx = 0;
 		
 		while(true){
+			
+			guard();
+		
+			vector <Mat> frames, resizeds;
 
 			cout << "[*] Capture Idx : " << idx << endl;
 
 			idx += 1;
 
-			while(OriginalQueue.size() > 15){
-				//cout << "[*]  OriginalQueue : " << OriginalQueue.size() << endl;
-				usleep(wait * 10);
+			while(OriginalQueue.size() > 20){
+				
+				usleep(wait * 5);
+			
+				if (not alive["capture"]) break;
 
 			}
 
 			capture >> frame;
 
-			if(frame.empty())
-				break;
+			if(frame.empty()) break;
 
 			resize(frame, resized, Size(size.width, size.height));
 			
-			cvtColor(resized, resized, CV_BGR2RGB);
+			//cvtColor(resized, resized, CV_BGR2RGB);
+
+			resizeds.emplace_back(move(resized));
+
+			frames.emplace_back(move(frame));
 			
-			get = false;
+			emplace <Mat> (frames, OriginalQueue, mOriginalQueue, get, nbatch, wait);
 			
-			while (! get){
-				get = mOriginalQueue.try_lock();
-				if (not get)
-					usleep(wait);
-			}
-			OriginalQueue.emplace_back(move(frame));
-			mOriginalQueue.unlock();
+			emplace <Mat> (resizeds, ReSizedQueue, mResizedQueue, get, nbatch, wait);
+			
+			if (not alive["capture"]) break;
 
-			get = false;
-			while (! get){
-				get = mResizedQueue.try_lock();
-				if (not get)
-					usleep(wait);
-			}
-
-			ReSizedQueue.emplace_back(move(resized));
-			mResizedQueue.unlock();
-
-			usleep(wait);
-			if (not alive["capture"])
-				break;
-
-			guard();
 		}
+		
 		alive["capture"] = false;
 		
 		return 0;	
@@ -263,27 +231,33 @@ public:
 
 		vector <Mat> ins;
 
+		int counter = 0;
+		
+		auto t_start = std::chrono::high_resolution_clock::now();
+		
+		alive["detect"] = true;
+
 		while (true){
+			
+			guard();
 
 			acquire <Mat> (ins, ReSizedQueue, mResizedQueue, get, nbatch, wait, "detect-Mat");
+		
+			auto t_start_inf = std::chrono::high_resolution_clock::now();
 
 			load(ins);
 			
-			auto t_start = std::chrono::high_resolution_clock::now();
-			
 			context->execute(nbatch, &buffers[0]);
-			
-			auto t_end = std::chrono::high_resolution_clock::now();
-			
-			float total = std::chrono::duration <float, std::milli> (t_end - t_start).count();
 
 			vector <flt::bboxes> boxes (nbatch);
 
 			unload();
 
 			convert(0, boxes[0]);
-
-			cout << "Time Elapse : " << total << endl;
+				auto t_end_inf = std::chrono::high_resolution_clock::now();
+				float total_inf = std::chrono::duration <float, std::milli> (t_end_inf - t_start_inf).count();
+				
+				cout << "Time Elapse Inference: " << total_inf << endl;
 			
 			emplace <flt::bboxes> (boxes, BoxesQueue, mBoxesQueue, get, nbatch, wait);
 
@@ -291,16 +265,33 @@ public:
 
 			ins.shrink_to_fit();
 
-			guard();
+			counter += 1;
+
+			/*if (counter == 100){
+
+				auto t_end = std::chrono::high_resolution_clock::now();
+				
+				float total = std::chrono::duration <float, std::milli> (t_end - t_start).count();
+				
+				cout << "Time Elapse : " << total << endl;
+
+				break;
+			}*/
+			
+			if (not alive["detect"])
+				
+				break;
 		
 		}
+		
+		alive["detect"] = false;
 
 	};
 
 inline int guard(){
 	for (auto & i : alive){
 		if (i.second == false){
-			cout << "[*] Guard Close " << i.first << endl;
+			//printf("[!] Guard : %s is closed\n", i.first.c_str());
 			for (auto & j : alive){
 				j.second = false;
 			}
@@ -310,61 +301,31 @@ inline int guard(){
 void post_thread(bool viz){
 
 	bool get = false;
+
+	bool close = false;
 	
-	alive["capture"] = true;
-	
-	vector <Mat> frames;
-		
-	vector <flt::bboxes> boxes;
+	alive["post"] = true;
 	
 	while (true){
-
+		
+		guard();
+		
+		vector <Mat> frames;
+		
+		vector <flt::bboxes> boxes;
+		
 		cout << "[*] In Post Thread" << endl;
 
 		acquire <flt::bboxes> (boxes, BoxesQueue, mBoxesQueue, get, 1, wait, "Post-Boxes");
 		
 		acquire <Mat> (frames, OriginalQueue, mOriginalQueue, get, 1, wait, "Post-Original");
-		//
-		//
-		//
-		/*
-		
-		get = false;
-		
-		while (! get){
-			while (BoxesQueue.empty()){
-				usleep(wait);
-			}
-			get = mBoxesQueue.try_lock();
-		}
-
-		//boxes = move(BoxesQueue.front());
-
-		BoxesQueue.pop_front();
-		BoxesQueue.shrink_to_fit();
-		mBoxesQueue.unlock();
-		get = false;
-
-		while (! get){
-			get = mOriginalQueue.try_lock();
-			usleep(wait);
-		}
-
-		
-		
-		get = false;
-		//frame = move(OriginalQueue.front());
-		OriginalQueue.pop_front();
-		OriginalQueue.shrink_to_fit();
-		mOriginalQueue.unlock();
-		//if (viz)
-		//	visualize(frame, boxes, 0.5, 33);
-		//
-		*/
 
 		visualize(frames, boxes, classes, visualizeThreshold);
 
 		//usleep(wait);
+		//
+		//
+		/*
 
 		frames.clear();
 
@@ -373,40 +334,33 @@ void post_thread(bool viz){
 		frames.shrink_to_fit();
 
 		boxes.shrink_to_fit();
+
+		*/
 		
-		guard();
-		
-		if (not alive["capture"])
+		if (not alive["post"])
 			
 			break;
 
 	}
+
+	alive["post"] = false;
 }
 
 
 
 inline void convert(int batch_id, flt::bboxes & boxes){
 
+	#pragma omp parallel for
+
 	for (int i = 0; i < keepCount[batch_id]; ++i){
 
 		float * det = & detectionOut[0] + (batch_id * detectionOutputParam.keepTopK + i) * 7;
 
 		if (det[2] < visualizeThreshold) continue;
-
-		// Output format for each detection is stored in the below order
-		// [image_id, label, confidence, xmin, ymin, xmax, ymax]
+		
 		assert((int) det[1] < OUTPUT_CLS_SIZE);
 		
 		boxes.emplace_back(move(flt::bbox(det, osize)));
-		
-		//string ppmid = "123";
-		//
-		//cout << "Classes : " << classes[int(det[1])] << endl;
-
-
-		
-		//printf("Detected %s in the image %d (%s) with confidence %f%% and coordinates (%f,%f),(%f,%f).\nResult stored in %s.\n", CLASSES[int(det[1])].c_str(), int(det[0]), ppmid, det[2] * 100.f, det[3] * INPUT_W, det[4] * INPUT_H, det[5] * INPUT_W, det[6] * , storeName.c_str());
-
 	}
 }
 

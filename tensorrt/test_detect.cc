@@ -41,17 +41,19 @@ int main(){
     
 	vector <int> keepCount(N);
 
-    vector <float> data (N * 3 * 300 * 300);
+	int size = 300;
 
-	flt::load_serialized_model("mobilenet_v2_custom.trt", & serialized, & runtime, & engine, & context, & plugin);
+    vector <float> data (N * 3 * size * size);
 
-	Mat mm = imread("dog.jpg");
+	//flt::load_serialized_model("mobilenet_v2_custom.trt", & serialized, & runtime, & engine, & context, & plugin);
 
-	Mat m(Size(300, 300), CV_8UC3);
+	//Mat mm = imread("dog.jpg");
 
-	ssd s("mobilenet_v2_custom.trt", classes, N, Size (300, 300));
+	//Mat m(Size(300, 300), CV_8UC3);
+
+	ssd s("mobilenet_v2_lite.trt", classes, N, Size (size, size));
 	
-	string video = "123.mp4";
+	string video = "TimeSquare.mp4";
 	
 	DetectType dt = DetectType::video;
 

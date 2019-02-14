@@ -38,7 +38,11 @@ LIBRARY = -l boost_system \
 -l opencv_core \
 -l opencv_video \
 -l opencv_videoio \
--l pthread
+-l pthread \
+-L /usr/local/cuda/lib64 \
+-L /usr/local/lib
+
+INCLUDE = -I /usr/local/cuda/include
 
 ssd:
 
@@ -46,11 +50,11 @@ ssd:
 
 serialize: serialize.cc
 	
-	g++ serialize.cc -L ~/trt/lib -I . -I /opt/cuda-9/include -I /opt/tensorrt-4/include -L /opt/cuda-9/lib64 -lcudnn -lcudart -lcublas -lnvinfer_plugin -lnvinfer -lnvparsers -o serialize $(LIBRARY)
+	g++ serialize.cc -L ~/trt/lib -I . -I /opt/cuda-9/include -I /opt/tensorrt-4/include -L /opt/cuda-9/lib64 -lcudnn -lcudart -lcublas -lnvinfer_plugin -lnvinfer -lnvparsers -o serialize $(LIBRARY) $(INCLUDE)
 
 detect: test_detect.cc src/*
 	
-	g++-7.3.1 -std=c++14 test_detect.cc -L ~/trt/lib -I . -I /opt/cuda-9/include -I /opt/tensorrt-4/include -L /opt/cuda-9/lib64 -lcudnn -lcudart -lcublas -lnvinfer_plugin -lnvinfer -lnvparsers -o detect $(LIBRARY) -O3
+	g++-7 -std=c++14 test_detect.cc -L ~/trt/lib -I . -I /opt/cuda-9/include -I /opt/tensorrt-4/include -L /opt/cuda-9/lib64 -lcudnn -lcudart -lcublas -lnvinfer_plugin -lnvinfer -lnvparsers -o detect $(LIBRARY) -O3 -march=native -flto -Ofast -fopenmp $(INCLUDE)
 
 clean:
 	$(AT)$(foreach sample,$(samples), $(MAKE) clean -C $(sample) &&) :

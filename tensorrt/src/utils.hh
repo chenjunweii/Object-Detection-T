@@ -1,6 +1,7 @@
 #ifndef FLT_TRT_UTILS
 #define FLT_TRT_UTILS
 
+#include <omp.h>
 #include <mutex>
 #include <unistd.h>
 #include "base.h"
@@ -17,13 +18,18 @@ inline int MatToTRTArray(Mat & m, vector <float> & data, int index = 0){
 
     int volImg = channel * height * width;
 
+	//#pragma omp parallel for
+	
 	for (int c = 0; c < channel; ++c){
+
+		//#pragma omp parallel for
 
 		for (unsigned j = 0, volChl = height * width; j < volChl; ++j) {
 
-			data[index * volImg + c * volChl + j] = (2.0 / 255.0) * static_cast <float> (m.data[j * channel + c]) - 1.0;
+			//data[index * volImg + c * volChl + j] = (2.0 / 255.0) * static_cast <float> (m.data[j * channel]) - 1.0;
+			data[index * volImg + c * volChl + j] = (2.0 / 255.0) * static_cast <float> (m.data[j * channel - c + 2]) - 1.0;
 
-			//cout << data[index * volImg + c * volChl + j] << endl;
+
 		}
 	}
 
@@ -165,8 +171,7 @@ inline void emplace(vector <T> & in, deque <T> & q, mutex & m, bool & get, int n
 }
 
 
-inline int visualize(vector <Mat> & in, vector <flt::bboxes> & boxes, vector <string> & classes, float threshold){
-	
+inline void visualize(vector <Mat> & in, vector <flt::bboxes> & boxes, vector <string> & classes, float threshold){
 	for (auto & box : boxes[0]){
 		if (box.s >= threshold){
 			Point ul(box.x, box.y);
@@ -180,8 +185,8 @@ inline int visualize(vector <Mat> & in, vector <flt::bboxes> & boxes, vector <st
 	}
 
 	cv::imshow("Visualize", in[0]);
-	
-	cv::waitKey(int(40));
+
+	cv::waitKey(int(33));
 
 		//cv::waitKey(0);
 }

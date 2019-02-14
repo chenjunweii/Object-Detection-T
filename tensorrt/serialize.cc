@@ -86,13 +86,17 @@ int main(int argc, char* argv[]){
 	
 	cout << "DawdwA" << endl;
 
-   	string uff = "mobilenet_v2_custom.pb.uff";
+	string net = "mobilenet_v2_lite";
+
+	int size = 300;
+
+   	string uff = net + ".pb.uff";
 
     const int N = 1;
 
     auto parser = createUffParser();
     
-	parser->registerInput("Input", DimsCHW(3, 300, 300), UffInputOrder::kNCHW);
+	parser->registerInput("Input", DimsCHW(3, size, size), UffInputOrder::kNCHW);
     
 	parser->registerOutput("MarkOutput_0");
     
@@ -112,7 +116,7 @@ int main(int argc, char* argv[]){
     
 	assert(trtModelStream != nullptr);
 
-	ofstream ofs("mobilenet_v2_custom.trt", ios::out | ios::binary);
+	ofstream ofs(net + ".trt", ios::out | ios::binary);
 
 	ofs.write((char *) (trtModelStream->data()), trtModelStream->size());
 

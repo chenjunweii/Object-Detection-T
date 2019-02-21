@@ -49,7 +49,7 @@ ICudaEngine* loadModelAndCreateEngine(const char * uffFile, int maxBatchSize,
 
     std::cout << "Begin parsing model..." << std::endl;
 
-    if (!parser->parse(uffFile, *network, nvinfer1::DataType::kFLOAT))
+    if (!parser->parse(uffFile, *network, nvinfer1::DataType::kHALF))
         RETURN_AND_LOG(nullptr, ERROR, "Fail to parse");
 
     std::cout << "End parsing model..." << std::endl;

@@ -1,0 +1,121 @@
+#include <iostream>
+#include "flt.h"
+#include <map>
+#include <vector>
+#include "detector.hh"
+
+
+using namespace std;
+using namespace flt::mx::image;
+using namespace flt::mx;
+using namespace mxnet::cpp;
+
+int main(){
+
+	Context ctx(DeviceType::kGPU, 0); 
+
+	string device = "gpu";
+	
+	string json = "deploy_ssd_inceptionv3_512-symbol.json";
+	
+	string params = "deploy_ssd_inceptionv3_512-0002.params";
+	
+	Symbol symbol = Symbol::Load(json);
+
+	map <string, NDArray> ndc = NDArray::LoadToMap(params);
+	
+	map <string, NDArray> args; 
+
+	map <string, NDArray> auxs;
+	
+	map <string, NDArray> grad;
+	
+	map <string, OpReqType> req;
+
+	args["data"] = NDArray(Shape(1, 3, 224, 224), ctx);
+
+	req["data"] = OpReqType::kNullOp;
+
+	for (auto & k : ndc){
+		auto type = k.first.substr(0, 3);
+		auto node = k.first.substr(4);
+		if (type.compare("arg") == 0){
+			args[node] = NDArray(Shape(k.second.GetShape()), ctx);
+			//grad[node] = NDArray(Shape(1), ctx);
+			//grad[node] = NDArray(Shape(k.second.GetShape()), ctx);
+			k.second.CopyTo(&args[node]);
+			req[node] = OpReqType::kNullOp;
+		}
+		else if (type.compare("aux") == 0){
+			auxs[node] = NDArray(Shape(k.second.GetShape()), ctx);
+			k.second.CopyTo(&auxs[node]);
+		}
+
+	}
+	Size size(512, 512);
+
+	vector <string> classes = { "aeroplane", "bicycle", "bird", "boat", "bottle", \
+								"bus", "car", "cat", "chair", "cow",
+							  "diningtable", "dog", "horse", "motorbike",
+                              "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor" };
+
+	detector det(json, params, device, classes, size, true);
+
+	det.detect();
+
+	/*
+
+	vector <string> nodes = symbol.ListArguments();
+
+	for (auto & k : nodes)
+
+		cout << k << endl;
+
+	*/
+
+	/*
+
+	cout << Shape(ndc["data"].GetShape()) << endl;
+
+	for (auto & nd : ndc)
+	
+		map <string, NDArray> ndg = NDArray()
+	
+	//
+	*/
+
+	/*
+
+	Executor * E = symbol.SimpleBind(ctx, args, grad, req, auxs);
+
+	cout << "dawd" << endl;
+
+	E->Forward(false);
+
+	vector <NDArray> ndout = (*E).outputs;
+
+	Size size(512, 512);
+
+	detection det(classes, size);
+
+	cout << Shape(ndout[0].GetShape()) << endl;
+
+	vector <vector <bbox>> bboxes;
+
+	det.convert(ndout, bboxes);
+
+	cout << "bboxes : " << bboxes[0].size() << endl;
+
+	*/
+
+
+
+	
+	cout << "end" << endl;
+	
+	MXNotifyShutdown();
+
+	return 0;
+
+}
+

@@ -38,6 +38,18 @@ def get_network(name, batch_size, input_size):
 
         output_shape = None
 
+    elif name == 'yolo3_mobilenet1_0':
+        
+        net, params = load_mxnet_model('yolo3_mobilenet1_0', 0, 'model')
+
+        net, params = nnvm.frontend.from_mxnet(net, params)
+
+        input_shape = (1, input_size, input_size, 3)
+        
+        input_shape = (1, 320, 320, 3)
+
+        output_shape = None
+
     elif name == 'ssd-inceptionv3-nms':
 
         net, params = load_mxnet_model('deploy_ssd_inceptionv3_512-det', 215, 'model')

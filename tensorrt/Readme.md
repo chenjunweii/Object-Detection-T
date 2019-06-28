@@ -31,6 +31,7 @@
 解決方法把
 
 - `predictor/head/box_head.py`
+- `predictor/head/class_head.py`
 - `ConvolutionalBoxHead.Predict()`
 
 ```python

@@ -13,7 +13,7 @@ int main(){
 
 	int N = 1;
 
-	const float visualizeThreshold = 0.5;
+	const float visualizeThreshold = 0.6;
 
 	static constexpr int OUTPUT_CLS_SIZE = 91;
 
@@ -41,7 +41,7 @@ int main(){
     
 	vector <int> keepCount(N);
 
-	int size = 300;
+	int size = 512;
 
     vector <float> data (N * 3 * size * size);
 
@@ -51,9 +51,12 @@ int main(){
 
 	//Mat m(Size(300, 300), CV_8UC3);
 
-	ssd s("mobilenet_v2_lite.trt", classes, N, Size (size, size));
+	//ssd s("mobilenet_v2_lite.trt", classes, N, Size (size, size));
+	ssd s("inception_v2_512_rms.trt", classes, N, Size (size, size));
 	
-	string video = "TimeSquare.mp4";
+	//string video = "TimeSquare.mp4";
+	//
+	string video = "Asakusa Street View Tokyo JAPAN-DFr-uP6iz40.mp4";
 	
 	DetectType dt = DetectType::video;
 

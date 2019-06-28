@@ -7,7 +7,9 @@ struct bbox {
 
 		bbox();
 		
-		bbox(vector <float> & fbbox, Size & size);
+		bbox(vector <float> & fbbox, cv::Size & size);
+		
+		bbox(float c, float s, vector <float> & fbbox, cv::Size & dsize, cv::Size & osize);
 
 		bbox(float c, float s, float x, float y, float x1, float y1);
 
@@ -24,6 +26,5 @@ struct bbox {
 		int y1 = 0;
 
 };
-
 
 #endif

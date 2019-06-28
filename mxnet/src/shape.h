@@ -1,70 +1,49 @@
-#ifndef FLT_SHAPE_H
-#define FLT_SHAPE_H
+#ifndef FLT_MX_SHAPE_H
+#define FLT_MX_SHAPE_H
 
 #include <iostream>
+#include <map>
+#include <vector>
 #include <mxnet-cpp/MxNetCpp.h>
-#include <random>
 
 using namespace std;
 using namespace mxnet::cpp;
 
-namespace flt{	
-
-	class fshape{	
+namespace flt{
+	
+	namespace mx{
 		
-		public:
+		inline void print_nd_shape(map <string, NDArray> &m, bool p);
 
-			int rank;
-			
-			int size = 1;
-			
-			vector <int> v;
+		/* print map */
+
+		inline void print_uint_shape(map <string, vector <mx_uint>> &shape_map);
 		
-			int operator [] (int i);
-			
-			friend ostream & operator << (ostream & stream, fshape const & instance){
-				
-				cout << "[";
-				
-				for(int i = 0; i != instance.rank; ++i){
+		/* print vector */
 
-					stream << instance.v[i];
+		inline void print_uint_shape(vector <vector <mx_uint>> &shape_vector, bool print_total = true);
+		
+		/* print shape */
 
-					if(i != instance.rank - 1)
+		inline void print_uint_shape(vector <mx_uint> &shape_vector);
 
-						cout << " ";
-				}
-			
+		inline void print_arch(map <string, Symbol> &neurons, map <string, vector <mx_uint>> &arg_shapes);
 
-				cout << "]";
+		inline Shape get_shape(Symbol in, map <string, vector <mx_uint>> &arg_shapes);
 
-				stream << endl;
+		inline void infer_partial(Symbol symbol,
+			map <string, vector <mx_uint>> &arg_shape,
+			 vector <vector <mx_uint>> &input,
+			  vector <vector <mx_uint>> &aux,
+			   vector <vector <mx_uint>> &out);
 
-				return stream;
-			}
+		inline int total(Shape s);
 
-			//fshape * operator = (fshape & instance);	
-			fshape & operator = (fshape & instance);	
-			
-			
-			template <typename T, typename... Args>
+		inline map <string, vector <mx_uint>> concat_uint_map(map <string, vector <mx_uint>> &m1, map <string, vector <mx_uint>> &m2);
 
-			inline fshape(T t, Args... args);
-			
-			template <typename T>
-
-			inline fshape(T t);
-
-			template <typename T>
-
-			inline void construct(T t);
-
-			template <typename T, typename... Args>
-			
-			inline void construct(T t, Args... args);
-
-	}; /* fshape */
+		inline map <string, Shape> merge_uint_vector(vector <string> &vname, vector <vector <mx_uint>> &vshape);
+	
+	} /* mx */
 
 } /* flt */
-
 #endif

@@ -45,6 +45,7 @@ void show10(float * f, string comment){
 
 	cout << "]" << endl;
 }
+
 void yolov3::detect_image(string sin) {
 
 	Mat in = imread(sin);

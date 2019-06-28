@@ -5,10 +5,8 @@
 #include <iostream>
 #include <mxnet-cpp/MxNetCpp.h>
 #include <opencv2/opencv.hpp>
-#include "src/mx/shape.h"
-#include "src/mx/image.h"
-#include "src/debug.h"
-#include "src/cv.hh"
+#include "src/shape.h"
+#include "src/image.h"
 
 
 using namespace std;

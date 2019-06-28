@@ -1,0 +1,549 @@
+#ifndef DETECTOR_YOLO3_HH
+#define DETECTOR_YOLO3_HH
+
+#include <memory>
+#include <assert.h>
+#include "struct.h"
+#include "box.hh"
+#include "utils.hh"
+#include <math.h>
+#include <mutex>
+#include <unistd.h>
+#include <boost/format.hpp>
+
+#include "src/detector/yolo3.h"
+
+#include "src/darknet/image.hh"
+
+using namespace std;
+
+using namespace flt::mx::image;
+
+using namespace flt::darknet;
+
+yolo3::yolo3(string & _json, string & _params, string & _device, vector <string> & _classes, int short_edge, cv::Size & frame_size, bool _streaming, bool _switching) : classes(_classes), switching(_switching), streaming(_streaming) {
+
+	if (_device.compare("gpu") == 0)
+		ctx = new Context(DeviceType::kGPU, 0);
+	else
+		ctx = new Context(DeviceType::kCPU, 0);
+	
+	net = Symbol::Load(_json);
+
+	size = find_detection_size(short_edge, frame_size);
+	
+	map <string, NDArray> ndc = NDArray::LoadToMap(_params); // ndarray cpu
+	
+	nds["mean"] = NDArray(Shape(1, 3, 1, 1), *ctx);
+
+	nds["std"] = NDArray(Shape(1, 3, 1, 1), *ctx);
+
+	nds["mean"].SyncCopyFromCPU(mean.data(), 3);
+	
+	nds["std"].SyncCopyFromCPU(std.data(), 3);
+
+	NDArray::WaitAll();
+
+	cout << "size height : " << size.height << endl;
+
+	cout << "size width : " << size.width << endl;
+
+	if (streaming)
+
+		streamer = cv::VideoWriter("appsrc ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host=0.0.0.0 port=5000", cv::CAP_GSTREAMER, 0, 20, cv::Size(1280, 720), true);
+
+	args[0]["data"] = NDArray(Shape(batch, 3, size.height, size.width), *ctx);
+	if (switching)
+		args[1]["data"] = NDArray(Shape(batch, 3, size.height, size.width), *ctx);
+
+	for (auto & k : ndc){
+		auto type = k.first.substr(0, 3);
+		auto node = k.first.substr(4);
+		if (type.compare("arg") == 0){
+			args[0][node] = NDArray(Shape(k.second.GetShape()), *ctx);
+			k.second.CopyTo(&args[0][node]);
+			//NDArray::WaitAll();
+			//req[node] = OpReqType::kNullOp;
+			if (switching)
+				args[1][node] = args[0][node];
+		}
+		else if (type.compare("aux") == 0){
+			auxs[0][node] = NDArray(Shape(k.second.GetShape()), *ctx);
+			k.second.CopyTo(&auxs[0][node]);
+			//NDArray::WaitAll();
+			if (switching)
+				auxs[1][node] = auxs[0][node];
+		}
+	}
+	NDArray::WaitAll();
+
+	for (int i = 0; i != way; i++)
+		E.emplace_back(net.SimpleBind(*ctx, args[i], grad, req, auxs[i]));
+}
+
+
+inline int yolo3::guard(){
+	for (auto & i : alive){
+		if (i.second == false){
+			cout << "[*] Guard Close " << i.first << endl;
+			for (auto & j : alive){
+				j.second = false;
+			}
+		}
+	}
+}
+
+
+inline int yolo3::detect_video(string & filename){
+
+	cv::Mat resized;
+	cv::Mat frame;
+	cv::VideoCapture capture;
+	capture = cv::VideoCapture(filename);
+	//else if (dt == DetectType::camer)
+	if (!capture.isOpened())
+		return -1;
+
+	osize = cv::Size(int(capture.get(CV_CAP_PROP_FRAME_WIDTH)), int(capture.get(CV_CAP_PROP_FRAME_HEIGHT)));
+    while(true){
+		capture >> frame;
+		if(frame.empty())
+			break;
+		cv::resize(frame, resized, cv::Size(size.width, size.height), CV_8UC3, 0, 2);
+		//frames.emplace_back(frame);
+		cv::cvtColor(resized, resized, CV_BGR2RGB);
+
+		load(resized, args[0]["data"]);
+
+		E[0]->Forward(false);
+
+		vector <vector <bbox>> boxes;
+		
+		convert(E[0]->outputs, boxes, size, osize);
+		
+		visualize(frame, boxes, false);
+	}
+
+}
+inline int yolo3::capture(DetectType & dt, string & filename){
+	cv::Mat resized;
+	cv::Mat frame;
+	cv::VideoCapture capture;
+	if (dt == DetectType::video)
+		capture = cv::VideoCapture(filename);
+	//else if (dt == DetectType::camer)
+	if (!capture.isOpened())
+		return -1;
+
+	osize = cv::Size(int(capture.get(CV_CAP_PROP_FRAME_WIDTH)), int(capture.get(CV_CAP_PROP_FRAME_HEIGHT)));
+
+	bool get = false;
+	alive["capture"] = true;
+
+	int count = -1;
+
+	int skip = 3;
+    while(true){
+		while(FrameQueue.size() > 15)
+			usleep(wait * 3);
+
+		capture >> frame;
+
+		count += 1;
+
+		if count % 3 != 0:
+
+			continue
+
+		if(frame.empty())
+			break;
+		//cv::resize(frame, resized, cv::Size(size.width, size.height));
+		cv::resize(frame, resized, cv::Size(size.width, size.height), CV_8UC3, 0, 2);
+		//frames.emplace_back(frame);
+		cv::cvtColor(resized, resized, CV_BGR2RGB);
+		get = false;
+		while (! get){
+			get = mFrames.try_lock();
+			if (not get)
+				usleep(wait);
+		}
+		FrameQueue.push_back(move(frame));
+		mFrames.unlock();
+
+		get = false;
+		while (! get){
+			get = mMatQueue.try_lock();
+			if (not get)
+				usleep(wait);
+		}
+		MatQueue.push_back(move(resized));
+		mMatQueue.unlock();
+		usleep(wait);
+		if (not alive["capture"])
+			break;
+    }
+	alive["capture"] = false;
+    return 0;	
+}
+
+inline int yolo3::post(bool viz){
+
+	bool get = false;
+	alive["capture"] = true;
+	cv::Mat frame;
+	while (true){
+		while (! get){
+			while (BoxesQueue.empty())
+				usleep(wait);
+			get = mBoxesQueue.try_lock();
+		}
+
+		vector <vector <bbox>> boxes = move(BoxesQueue.front());
+		BoxesQueue.pop_front();
+		BoxesQueue.shrink_to_fit();
+		mBoxesQueue.unlock();
+		get = false;
+
+		while (! get){
+			get = mFrames.try_lock();
+			usleep(wait);
+		}
+
+		get = false;
+		frame = move(FrameQueue.front());
+		FrameQueue.pop_front();
+		FrameQueue.shrink_to_fit();
+		mFrames.unlock();
+
+		visualize(frame, boxes, true);
+		if (streaming)
+			streamer << frame;
+		guard();
+		usleep(wait);
+		if (not alive["capture"])
+			break;
+	}
+}
+
+inline void yolo3::load(int no){
+	bool get = false;
+	while (! get){
+		while (MatQueue.empty()){
+			usleep(wait);
+		}
+		get = mMatQueue.try_lock();
+	}
+	cv::Mat frame = move(MatQueue.front());
+	MatQueue.pop_front();
+	MatQueue.shrink_to_fit();
+	mMatQueue.unlock();
+	tinput[no].emplace_back(move(frame));
+	load(tinput[no][0], args[no]["data"]);
+
+	tinput[no].clear();
+	tinput[no].shrink_to_fit();
+	usleep(wait);
+}
+
+
+inline void yolo3::unload(int no){
+	lock[no].unlock();
+}
+
+inline int yolo3::request(){
+	while (true){
+		for (int j = 0; j != way; ++j)
+			if (lock[j].try_lock())
+				return j;
+		usleep(wait);
+	}
+}
+
+inline int yolo3::detect(int tid){
+	int no;
+	bool get = false;
+	string stid = to_string(tid);
+	vector <vector <bbox>> boxes;
+	alive[stid] = true;
+	while (true){
+		
+		no = request();
+		
+		load(no);
+		
+		get = false;
+
+		auto t_start_inf = std::chrono::high_resolution_clock::now();
+		
+		E[no]->Forward(false);
+
+		//NDArray::WaitAll();
+		//
+		E[no]->outputs[0].WaitToRead();
+		
+		auto t_end_inf = std::chrono::high_resolution_clock::now();
+		
+		float total_inf = std::chrono::duration <float, std::milli> (t_end_inf - t_start_inf).count();
+		
+		cout << "Time Elapse Inference: " << total_inf << endl;
+
+		convert(E[no]->outputs, boxes, size, osize);
+		while (! get){
+			get = mBoxesQueue.try_lock();
+			if (! get)
+				usleep(wait);
+		}
+
+		BoxesQueue.push_back(move(boxes));
+		mBoxesQueue.unlock();
+		unload(no);
+		boxes.clear();
+		boxes.shrink_to_fit();
+		usleep(wait);
+		if (not alive[stid])
+			break;
+	}
+
+	alive[stid] = false;
+}
+
+yolo3::~yolo3(){
+	delete ctx;
+	for (auto & e : E)
+		delete e;
+}
+
+//inline void yolo3::convert(vector <NDArray> & ndout, vector <vector <float>> & classes, vector <vector <float>> & scores, vector <vector <bbox>> & bboxes, cv::Size & size_){
+inline void yolo3::convert(vector <NDArray> & ndout, vector <vector <bbox>> & bboxes, cv::Size & dsize, cv::Size & osize){
+
+	vector <mx_uint> classes_shape = ndout[0].GetShape();
+	vector <mx_uint> scores_shape = ndout[1].GetShape();
+	vector <mx_uint> bboxes_shape = ndout[2].GetShape();
+	
+	int classes_size = classes_shape[0] * classes_shape[1] * classes_shape[2];
+	int scores_size = scores_shape[0] * scores_shape[1] * scores_shape[2];
+	int bboxes_size = bboxes_shape[0] * bboxes_shape[1] * bboxes_shape[2];
+
+	vector <float> fclasses (classes_size);
+	vector <float> fscores (scores_size);
+	vector <float> fbboxes (bboxes_size);
+
+	ndout[0].WaitToRead();
+	ndout[1].WaitToRead();
+	ndout[2].WaitToRead();
+	
+	ndout[0].SyncCopyToCPU(fclasses.data(), classes_size);
+	ndout[1].SyncCopyToCPU(fscores.data(), scores_size);
+	ndout[2].SyncCopyToCPU(fbboxes.data(), bboxes_size);
+
+
+	vector <float> slice;
+	for (int i = 0; i != bboxes_shape[0]; ++i){
+		(bboxes).emplace_back(vector <bbox> ());
+		for (int j = 0; j != bboxes_shape[1]; ++j){
+			if (fclasses[j] >= 0 and fscores[j] > threshold){
+
+				slice = vector <float> (fbboxes.begin() + j * 4, fbboxes.begin() + j * 4 + 4);
+				
+				(bboxes)[i].emplace_back(move(bbox(fclasses[j], fscores[j], slice, dsize, osize)));
+			}
+		}
+	}
+	
+}
+
+inline int yolo3::visualize(cv::Mat & in, vector <vector <bbox>> & bboxes, bool show){
+
+		assert(bboxes.size() == 1); // assert batch size = 1
+		for (auto & box : bboxes[0]){
+			//if (box.s >= threshold){
+				cv::Point ul(box.x, box.y);
+				cv::Point br(box.x1, box.y1);
+				cv::Point tp(box.x1, box.y1 - 5);
+				cv::rectangle(in, ul, br, cv::Scalar(0, 255, 0), 3.5);
+				string text = boost::str(boost::format("%s : %f") % classes[box.c] % box.s);
+				cv::putText(in, text, tp, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.5,  cv::Scalar(0, 0, 255, 255), 2);
+				cout << "classes : " << classes[box.c] << endl;
+			//}
+		}
+
+		//cout << in.size().width << endl;
+		//cout << in.size().height << endl;
+		//
+		if (show){
+			cv::imshow("Visualize", in);
+			cv::waitKey(int(1000.0 / 30));
+		}
+		//cv::waitKey(0);
+}
+
+
+inline cv::Size yolo3::find_detection_size(int short_edge, cv::Size & _size, int max_size, int mult_base){
+
+	int h = _size.height; int w = _size.width;
+
+	int im_size_min, im_size_max;
+
+	if (w > h){
+
+		im_size_min = h; im_size_max = w;
+
+	}
+
+	else{
+
+		im_size_min = w; im_size_max = h;
+	}
+    
+	float scale = float(short_edge) / float(im_size_min);
+    
+	if (round(scale * im_size_max / mult_base) * mult_base > max_size)
+        scale = float(floor(max_size / mult_base) * mult_base) / float(im_size_max);
+
+    int new_w = int(round(w * scale / mult_base) * mult_base);
+    
+	int new_h = int(round(h * scale / mult_base) * mult_base);
+
+    return cv::Size(new_w, new_h);
+
+}
+
+inline void yolo3::load(cv::Mat & mat, NDArray & nd){
+
+	int h = mat.size().height;
+
+	int w = mat.size().width;
+	
+	int c = mat.channels();
+
+	int _size = c * h * w;
+
+	vector <float> farray (_size);
+
+	int cbase, hbase = 0;
+
+	for (int _c = 0; _c < c; ++_c) {
+
+		cbase = _c * h * w;
+
+		for (int _h = 0; _h < h; ++_h) {
+
+			hbase = _h * w;
+
+			for (int _w = 0; _w < w; ++_w) {
+		  		
+				//farray.emplace_back(static_cast <float> (mat.data[(i * h + j) * channel + c]));
+				farray[cbase + hbase + _w] = (((static_cast <int> (mat.data[(hbase + _w) * c + _c])) / 255.0) - mean[_c]) / std[_c];
+			}
+		}
+	}
+
+	nd.WaitToWrite();
+
+	nd.SyncCopyFromCPU(farray.data(), _size);
+
+	//NDArray::WaitAll();
+	//
+	nd.WaitToRead();
+
+}
+
+
+
+inline int yolo3::detect_image(cv::Mat & in){
+
+	int t = 0; // thread id
+	
+	osize = in.size();
+
+	cv::Mat resized, rgb;
+
+	cv::cvtColor(in, rgb, CV_BGR2RGB);
+	
+	cv::resize(rgb, resized, cv::Size(size.width, size.height), CV_8UC3, 0, 2);
+
+	load(resized, args[t]["data"]);
+
+	tinput[t].clear();
+	
+	tinput[t].shrink_to_fit();
+		
+	E[t]->Forward(false);
+	
+	vector <vector <bbox>> boxes;
+	
+	convert(E[t]->outputs, boxes, size, osize);
+	
+	visualize(in, boxes, true);
+}
+
+template <class T>
+
+inline void acquire(vector <T> & out, deque <T> & q, mutex & m, bool & get, int nbatch, unsigned int wait, string comment){
+
+	get = false;
+
+	//printf("[*] Enter %s\n", comment.c_str());
+	
+	while (! get){
+
+		while (q.empty() || (q.size() < nbatch)){
+			
+			//printf("[*] %s Queue is not enough : %d\n", comment.c_str(), q.size());
+
+			usleep(wait);
+		}
+
+		get = m.try_lock();
+	}
+
+	for (int b = 0; b != nbatch; ++b){
+
+		out.emplace_back(move(q.front()));
+	
+		q.pop_front();
+
+	}
+	
+	m.unlock();
+	
+	q.shrink_to_fit();
+
+	get = false;
+	
+	usleep(wait);
+
+}
+
+template <class T>
+
+inline void emplace(vector <T> & in, deque <T> & q, mutex & m, bool & get, int nbatch, unsigned int wait){
+	
+	get = false;
+	
+	while (! get){
+
+		get = m.try_lock();
+		
+		if (not get)
+			
+			usleep(wait);
+	}
+
+	for (int b = 0; b != nbatch; ++b)
+
+		q.emplace_back(move(in[b]));
+	
+	m.unlock();
+
+	in.clear();
+
+	in.shrink_to_fit();
+	
+	get = false;
+
+	usleep(wait);
+
+	
+}
+#endif

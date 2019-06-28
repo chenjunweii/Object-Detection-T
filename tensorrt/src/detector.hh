@@ -31,7 +31,7 @@ public:
 
 	map <string, bool> alive;
 	
-	unsigned int wait = 100;
+	unsigned int wait = 5;
 
 	int nbatch, nclass;
 
@@ -191,9 +191,9 @@ public:
 
 			idx += 1;
 
-			while(OriginalQueue.size() > 20){
+			while(OriginalQueue.size() > 3){
 				
-				usleep(wait * 5);
+				usleep(wait * 1);
 			
 				if (not alive["capture"]) break;
 
@@ -248,16 +248,19 @@ public:
 			load(ins);
 			
 			context->execute(nbatch, &buffers[0]);
+			
+			auto t_end_inf = std::chrono::high_resolution_clock::now();
 
 			vector <flt::bboxes> boxes (nbatch);
 
 			unload();
 
 			convert(0, boxes[0]);
-				auto t_end_inf = std::chrono::high_resolution_clock::now();
-				float total_inf = std::chrono::duration <float, std::milli> (t_end_inf - t_start_inf).count();
-				
-				cout << "Time Elapse Inference: " << total_inf << endl;
+		
+		
+			float total_inf = std::chrono::duration <float, std::milli> (t_end_inf - t_start_inf).count();
+		
+			cout << "Time Elapse Inference: " << total_inf << endl;
 			
 			emplace <flt::bboxes> (boxes, BoxesQueue, mBoxesQueue, get, nbatch, wait);
 

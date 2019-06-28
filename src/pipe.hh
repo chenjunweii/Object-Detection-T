@@ -4,12 +4,7 @@
 #include <numeric>
 using namespace std;
 
-<<<<<<< HEAD
-TVMPipe::TVMPipe(vector <int64_t> & _shape, string device, string dtype = "float32",
-			int _device_id = 0) : shape(_shape), device_id(_device_id) {
-=======
 TVMPipe::TVMPipe(vector <int64_t> & _shape, string device, string dtype = "float32", int _device_id = 0) : shape(_shape), device_id(_device_id) {
->>>>>>> 3df6457f817f3ee5923f83d0c9377e0a1a19fc2e
 
 	size = accumulate(_shape.begin(), _shape.end(), 1, multiplies <int64_t> ());
 	

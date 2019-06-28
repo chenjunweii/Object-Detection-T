@@ -6,6 +6,7 @@
 #include <vector>
 #include "detector.hh"
 #include "image.hh"
+#include "src/image.hh"
 
 using namespace std;
 using namespace flt::mx::image;

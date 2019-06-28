@@ -86,9 +86,11 @@ int main(int argc, char* argv[]){
 	
 	cout << "DawdwA" << endl;
 
-	string net = "mobilenet_v2_lite";
+	//string net = "mobilenet_v2_lite";
+	//
+	string net = "inception_v2_512_rms";
 
-	int size = 300;
+	int size = 512;
 
    	string uff = net + ".pb.uff";
 

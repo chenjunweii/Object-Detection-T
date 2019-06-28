@@ -1,4 +1,4 @@
-
+import tvm
 import nnvm
 import numpy as np
 from nnvm import testing
@@ -6,6 +6,8 @@ from tvm import autotvm
 from tvm.contrib.util import tempdir
 from tvm.autotvm.tuner import XGBTuner, GATuner, RandomTuner, GridSearchTuner
 from tool.load_deploy_model import load_model, load_mxnet_model
+from gluoncv import model_zoo, data, utils
+
 from utils import *
 
 def get_network(name, batch_size, input_size):
@@ -37,10 +39,56 @@ def get_network(name, batch_size, input_size):
         input_shape = (1, 680, 680, 3)
 
         output_shape = None
+    
+    elif name == 'yolo3_darknet53_coco_gluoncv_block':
+        
+        block = model_zoo.yolo3_darknet53_coco(pretrained_base=True, pretrained=True)
+        
+        input_shape = (1, 3, input_size, input_size)
+        
+        mod, params = tvm.relay.frontend.from_mxnet(block, {"data": input_shape})
+        
+        net = mod[mod.entry_func]
+
+        net = tvm.relay.Function(net.params, (net.body), None, net.type_params, net.attrs)
+
+        output_shape = None
 
     elif name == 'yolo3_mobilenet1_0':
         
         net, params = load_mxnet_model('yolo3_mobilenet1_0', 0, 'model')
+        
+        print(net)
+
+        #net, params = nnvm.frontend.from_mxnet(net, params)
+
+        net, params = tvm.relay.frontend.from_mxnet(net)
+
+        input_shape = (1, input_size, input_size, 3)
+        
+        input_shape = (1, 320, 320, 3)
+
+        output_shape = None
+    
+    elif name == 'yolo3-mobilenet1_0_split':
+        
+        net, params = load_mxnet_model('yolo3-mobilenet1_0_split', 0, 'model')
+
+        #net, params = nnvm.frontend.from_mxnet(net, params)
+        
+        net, params = tvm.relay.frontend.from_mxnet(net)
+
+        raise
+
+        input_shape = (1, input_size, input_size, 3)
+        
+        input_shape = (1, 320, 320, 3)
+
+        output_shape = None
+    
+    elif name == 'yolo3-mobilenet1_0_no_arange':
+        
+        net, params = load_mxnet_model('yolo3-mobilenet1_0_no_arange', 0, 'model')
 
         net, params = nnvm.frontend.from_mxnet(net, params)
 

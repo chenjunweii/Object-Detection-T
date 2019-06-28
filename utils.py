@@ -8,6 +8,7 @@ def load_tvm_module(filename, ext = 'so'):
     tnds = tvm.module.load(filename)
 
     return tnds
+
 def load_tvm_params(filename):
 
     filename = '{}.tvm.params'.format(filename)
@@ -18,9 +19,8 @@ def load_tvm_params(filename):
 
     return tnds
 
-def save_tvm_params(network, params):
+def save_tvm_params(fn, params):
 
-    fn = '{}.tvm.params'.format(network)
     tnds_byte = nnvm.compiler.save_param_dict(params)
     
     File = open(fn, "wb")
@@ -29,13 +29,19 @@ def save_tvm_params(network, params):
 
     print('[*] TVM Parameters is save to {}'.format(fn))
 
-def save_tvm_graph(network, graph):
+def save_tvm_graph(fn, graph, is_str = False):
 
-    fn = '{}.tvm.json'.format(network)
+    #fn = '{}.tvm.json'.format(network)
 
     with open(fn, "w") as fo:
+
+        if is_str:
+
+            fo.write(graph)
+
+        else:
         
-        fo.write(graph.json())
+            fo.write(graph.json())
     
     print('[*] TVM Graph is save to {}'.format(fn))
 

@@ -26,7 +26,7 @@ MODEL_NAME = 'yolov3'
 # Download required files
 # -----------------------
 # Download cfg and weights file if first time.
-CFG_NAME = MODEL_NAME + '-320.cfg'
+CFG_NAME = MODEL_NAME + '.cfg'
 WEIGHTS_NAME = MODEL_NAME + '.weights'
 REPO_URL = 'https://github.com/siju-samuel/darknet/blob/master/'
 CFG_URL = REPO_URL + 'cfg/' + CFG_NAME + '?raw=true'

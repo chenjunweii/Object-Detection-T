@@ -1,4 +1,4 @@
-CXX = g++ -std=c++11  
+CXX = g++-7 -std=c++11  
 
 MXNET = ~/src/mxnet
 TVM = ~/src/tvm
@@ -75,3 +75,10 @@ image: test_image.cc detector.hh detector.h image.hh
 
 	 ${CXX} test_image.cc ${LIBRARY} ${INCLUDE} -I include -o image -L . -l flt
 
+detect_yolo_image: detect_yolo_image.cc src/detector/yolo* box.h*
+
+	 ${CXX} detect_yolo_image.cc ${LIBRARY} ${INCLUDE} -I include -o detect_yolo_image
+
+detect_yolo_video: detect_yolo_video.cc src/detector/yolo* box.h*
+
+	 ${CXX} detect_yolo_video.cc ${LIBRARY} ${INCLUDE} -I include -openmp -o detect_yolo_video

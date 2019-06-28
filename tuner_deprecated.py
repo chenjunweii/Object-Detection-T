@@ -65,7 +65,7 @@ class tuner(object):
         print("[*] Tuning...")
 
         #if not self.recompile:
-        self.tune_tasks()
+        #self.tune_tasks()
 
         print("[*] Compile...")
 
@@ -73,36 +73,27 @@ class tuner(object):
 
             #self.params[k] = 
 
-            pass
+            print(type(v))
 
-            #print(type(v))
-
-        print(self.log_filename)
-
-        with autotvm.apply_history_best(self.log_filename):
-            with tvm.relay.build_config(opt_level = 3):
-                graph, lib, params = tvm.relay.build_module.build(
-                        self.net, 
-                        target = self.target,
-                        #shape = {'data' : self.input_shape},
-                        params = self.params)
-                        #dtype = dtypes)
+        #with autotvm.apply_history_best(self.log_filename):
+        with nnvm.compiler.build_config(opt_level = 3):
+            graph, lib, params = nnvm.compiler.build(
+                self.net,
+                self.target,
+                target_host = self.target_host,
+                shape = {'data': self.input_shape},
+                params = self.params,
+                dtype = dtypes)
 
         # export library
 
             print('[*] Exporting ... ')
-
-            print('[*] Graph : ', graph)
             
             lib.export_library('lib/{}.tvm.so'.format(self.network))
 
             lib.save('lib/{}.tvm.o'.format(self.network))
 
-            save_tvm_graph('graph/{}.tvm.json'.format(self.network), graph, is_str = True)
-
-            save_tvm_params('params/{}.tvm.params'.format(self.network), params)
-
-            print(params)
+            save_tvm_graph(self.network, graph)
     
     def tune_tasks(self,
                     use_transfer_learning = True,

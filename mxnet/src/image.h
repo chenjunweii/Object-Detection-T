@@ -6,8 +6,7 @@
 #include <mxnet-cpp/MxNetCpp.h>
 #include <opencv2/opencv.hpp>
 
-#include "src/mx/shape.h"
-#include "src/debug.h"
+#include "src/shape.h"
 
 using namespace std;
 using namespace mxnet::cpp;
@@ -36,7 +35,6 @@ namespace flt{
 			inline void saveb(vector <NDArray> &vnd);
 			
 			inline void load(string filename, NDArray & nd); // load image
-			
 			
 			inline Symbol encode(Symbol s); // encode image
 			
